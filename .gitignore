@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.env
+.DS_Store
+
+# Backups locales
+src/app fase*.js
+src/app release.js
+src/app antes*.js
+src/app pre*.js
+src/app.backup.js
+src/styles fase*.css
+src/styles release.css
+src/styles antes*.css
+src/styles pre*.css
+src/styles.backup.css
