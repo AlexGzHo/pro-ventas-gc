@@ -471,6 +471,7 @@ async function loadRows() {
     const { data, error } = await supabase
       .from('subscriptions')
       .select('*')
+      .is('archived_at', null)
       .order('expiry_date', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: false })
 
@@ -583,33 +584,65 @@ function filteredRows() {
   })
 }
 
-function renderKpis() {
-  // Totales principales siempre en soles (moneda base).
-  // Los importes en USDT se convierten con el tipo de cambio registrado
-  // en su propia operación, por lo que son históricamente estables.
-  const income = rows.reduce((sum, r) => sum + amountInPEN(r.sale_price, rowSaleCurrency(r), r.sale_price_exchange_rate), 0)
-  const cost = rows.reduce((sum, r) => sum + amountInPEN(r.cost, rowCostCurrency(r), r.cost_exchange_rate), 0)
-  const counts = rows.reduce((acc, r) => {
-    const key = statusFor(r.expiry_date).key
-    acc[key] = (acc[key] || 0) + 1
-    return acc
-  }, {})
 
-  const rate = Number(usdtViewRate || 0)
-  const usdtViewReady = totalView === 'USDT' && rate > 0
+async function renderKpis() {
+  const activeCount = filteredRows().filter(
+    (r) => statusFor(r.expiry_date) === 'activo' || statusFor(r.expiry_date) === 'hoy'
+  ).length
+  const soonCount = filteredRows().filter((r) => statusFor(r.expiry_date) === 'proximo').length
+  const expiredCount = filteredRows().filter((r) => statusFor(r.expiry_date) === 'vencido').length
 
-  document.querySelector('#kpis').innerHTML = `
-    ${kpi('Ingresos', totalView === 'PEN' ? formatMoney(income) : usdtViewReady ? formatUSDT(amountInUSDT(income, 'PEN', rate)) : '—')}
-    ${kpi('Egresos', totalView === 'PEN' ? formatMoney(cost) : usdtViewReady ? formatUSDT(amountInUSDT(cost, 'PEN', rate)) : '—')}
-    ${kpi('Ganancia', totalView === 'PEN' ? formatMoney(income - cost) : usdtViewReady ? formatUSDT(amountInUSDT(income - cost, 'PEN', rate)) : '—')}
-    ${kpi('Activos', counts.activo || 0)}
-    ${kpi('Por vencer', (counts.proximo || 0) + (counts.hoy || 0))}
-    ${kpi('Vencidos', counts.vencido || 0)}`
+  document.querySelector('#kpi-active').innerHTML = kpi('Activas', activeCount)
+  document.querySelector('#kpi-soon').innerHTML = kpi('Vencen pronto', soonCount)
+  document.querySelector('#kpi-expired').innerHTML = kpi('Vencidas', expiredCount)
 
-  const rateBox = document.querySelector('#usdtRateBox')
-  if (rateBox) rateBox.classList.toggle('hidden', totalView === 'PEN')
+  // Finanzas del mes (con validación de FINANCIAL_HISTORY_START)
+  const now = new Date();
+  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+  let income = 0;
+  let cost = 0;
+  let counts = 0;
+  let isBeforeHistory = false;
+
+  const periodStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0)
+  const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
+
+  const [hsYear, hsMonth, hsDay] = FINANCIAL_HISTORY_START.split('-').map(Number)
+  const historyStart = new Date(hsYear, hsMonth - 1, hsDay, 0, 0, 0, 0)
+
+  if (periodEnd < historyStart) {
+    isBeforeHistory = true;
+  } else {
+    const effectiveStart = periodStart < historyStart ? historyStart : periodStart
+
+    try {
+      const { data, error } = await supabase
+        .from('subscription_renewals')
+        .select('sale_amount_pen, cost_amount_pen')
+        .gte('created_at', effectiveStart.toISOString())
+        .lte('created_at', periodEnd.toISOString());
+
+      if (!error && data) {
+        income = data.reduce((sum, r) => sum + Number(r.sale_amount_pen || 0), 0);
+        cost = data.reduce((sum, r) => sum + Number(r.cost_amount_pen || 0), 0);
+        counts = data.length;
+      }
+    } catch (e) {
+      console.error('Error loading financial kpis', e);
+    }
+  }
+
+  if (isBeforeHistory) {
+    document.querySelector('#kpi-income').innerHTML = kpi('Ingresos del mes', '<small>Sin datos históricos</small>')
+    document.querySelector('#kpi-cost').innerHTML = kpi('Costos del mes', '<small>Sin datos históricos</small>')
+    document.querySelector('#kpi-operations').innerHTML = kpi('Operaciones', '<small>-</small>')
+  } else {
+    document.querySelector('#kpi-income').innerHTML = kpi('Ingresos del mes', `S/ ${formatMoney(income)}`)
+    document.querySelector('#kpi-cost').innerHTML = kpi('Costos del mes', `S/ ${formatMoney(cost)}`)
+    document.querySelector('#kpi-operations').innerHTML = kpi('Operaciones', counts)
+  }
 }
-
 function kpi(label, value) {
   return `<article class="kpi"><span>${label}</span><strong>${value}</strong></article>`
 }
@@ -959,66 +992,111 @@ function openCredentialsModal(row) {
   })
 }
 
+
+let currentRenewIdempotencyKey = null;
+
 function openRenewModal(row) {
+  currentRenewIdempotencyKey = crypto.randomUUID();
   const host = document.querySelector('#modalHost')
   host.innerHTML = `
-    <div class="modal-backdrop" id="renewBackdrop">
+    <div class="modal-backdrop" id="backdrop">
       <section class="modal renew-modal" role="dialog" aria-modal="true">
         <div class="modal-head">
-          <div>
-            <h3>Renovar suscripción</h3>
-            <p class="modal-subtitle">${escapeHtml(row.client_name || 'Cliente')} · ${escapeHtml(row.service || 'Servicio')}</p>
-          </div>
-          <button id="closeRenew" class="btn btn-small btn-ghost">✕</button>
+          <h3>Renovar suscripción</h3>
+          <button id="closeModal" class="btn btn-small btn-ghost">✕</button>
         </div>
         <div class="modal-body">
-          <p class="renew-current">Vencimiento actual: <strong>${formatDate(row.expiry_date)}</strong></p>
+          <p class="renew-current">Vence el: ${formatDateStr(row.expiry_date)}</p>
           <div class="renew-grid">
-            <button class="btn renew-option" data-days="7">+ 7 días</button>
-            <button class="btn renew-option" data-days="15">+ 15 días</button>
-            <button class="btn renew-option" data-months="1">+ 1 mes</button>
-            <button class="btn renew-option" data-months="3">+ 3 meses</button>
-            <button class="btn renew-option" data-months="6">+ 6 meses</button>
-            <button class="btn renew-option" data-months="12">+ 12 meses</button>
+            <button class="btn btn-primary renew-option" onclick="renewRow('${row.id}', '7 days')">+ 7 días</button>
+            <button class="btn btn-primary renew-option" onclick="renewRow('${row.id}', '15 days')">+ 15 días</button>
+            <button class="btn btn-primary renew-option" onclick="renewRow('${row.id}', '1 month')">+ 1 mes</button>
+            <button class="btn btn-primary renew-option" onclick="renewRow('${row.id}', '3 months')">+ 3 meses</button>
+            <button class="btn btn-primary renew-option" onclick="renewRow('${row.id}', '6 months')">+ 6 meses</button>
+            <button class="btn btn-primary renew-option" onclick="renewRow('${row.id}', '12 months')">+ 12 meses</button>
           </div>
         </div>
       </section>
-    </div>`
+    </div>
+  `
 
-  const close = () => { host.innerHTML = '' }
-  document.querySelector('#closeRenew').addEventListener('click', close)
-  document.querySelector('#renewBackdrop').addEventListener('click', (e) => {
-    if (e.target.id === 'renewBackdrop') close()
+  document.getElementById('closeModal').addEventListener('click', () => {
+    host.innerHTML = '';
+    currentRenewIdempotencyKey = null;
   })
-  document.querySelectorAll('.renew-option').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const days = Number(btn.dataset.days || 0)
-      const months = Number(btn.dataset.months || 0)
-      await renewRow(row, { days, months })
-      close()
+}
+
+async function renewRow(rowOrId, period) {
+  const rowId = typeof rowOrId === 'object' ? rowOrId.id : rowOrId;
+  const row = typeof rowOrId === 'object' ? rowOrId : rows.find(r => r.id === rowId);
+
+  if (!confirm(`¿Renovar ${row.client_name} por ${period}?`)) return
+
+  const btn = event?.currentTarget || document.activeElement
+  const originalText = btn.innerHTML
+
+  if (btn && btn.tagName === 'BUTTON') {
+    btn.disabled = true
+    btn.innerHTML = '<span class="spinner"></span>'
+  }
+
+  setLoading(true, 'Procesando renovación...')
+  try {
+    let period_value = 1
+    let period_unit = 'month'
+
+    if (period === '7 days') { period_value = 7; period_unit = 'day' }
+    else if (period === '15 days') { period_value = 15; period_unit = 'day' }
+    else if (period === '1 month') { period_value = 1; period_unit = 'month' }
+    else if (period === '3 months') { period_value = 3; period_unit = 'month' }
+    else if (period === '6 months') { period_value = 6; period_unit = 'month' }
+    else if (period === '12 months') { period_value = 12; period_unit = 'month' }
+    else throw new Error("Período no soportado por PRO VENTAS GC v2")
+
+    const { data, error } = await supabase.rpc('process_renewal', {
+      p_subscription_id: rowId,
+      p_period_value: period_value,
+      p_period_unit: period_unit,
+      p_idempotency_key: currentRenewIdempotencyKey
     })
-  })
-}
 
-async function renewRow(row, period) {
-  const newDate = addPeriod(row.expiry_date, period)
-  setLoading(true, 'Renovando...')
-  const { error } = await supabase.from('subscriptions').update({ expiry_date: newDate }).eq('id', row.id)
-  setLoading(false)
-  if (error) return toast(error.message, 'error')
-  toast(`Renovado hasta ${formatDate(newDate)}.`)
-  await loadRows()
-}
+    if (error) throw error
 
+    toast('Suscripción renovada (con historial)')
+    currentRenewIdempotencyKey = null; // Consume on success
+    const host = document.querySelector('#modalHost');
+    if (host) host.innerHTML = '';
+    await loadRows()
+  } catch (err) {
+    console.error(err)
+    alert('Error al renovar: ' + err.message)
+    if (btn && btn.tagName === 'BUTTON') {
+      btn.disabled = false
+      btn.innerHTML = originalText
+    }
+  } finally {
+    setLoading(false)
+  }
+}
 async function deleteRow(row) {
-  const ok = window.confirm(`¿Eliminar la suscripción de ${row.client_name || 'este cliente'} en ${row.service || 'este servicio'}?`)
-  if (!ok) return
-  setLoading(true, 'Eliminando...')
-  const { error } = await supabase.from('subscriptions').delete().eq('id', row.id)
-  setLoading(false)
-  if (error) return toast(error.message, 'error')
-  toast('Registro eliminado.')
-  await loadRows()
+  if (!confirm(`¿Archivar (dar de baja) a ${row.client_name}?`)) return
+
+  setLoading(true, 'Archivando...')
+  try {
+    const { error } = await supabase
+      .from('subscriptions')
+      .update({ archived_at: new Date().toISOString() })
+      .eq('id', row.id)
+
+    if (error) throw error
+    toast('Suscripción archivada')
+    await loadRows()
+  } catch (err) {
+    console.error(err)
+    alert('Error al archivar: ' + err.message)
+  } finally {
+    setLoading(false)
+  }
 }
 
 async function loadProducts(force = false) {
@@ -1422,6 +1500,7 @@ async function openForm(row = null) {
   }
 
   editingId = row?.id || null
+  currentFormIdempotencyKey = editingId ? null : crypto.randomUUID()
   const host = document.querySelector('#modalHost')
   const extras = row?.extras && typeof row.extras === 'object'
     ? Object.entries(row.extras)
@@ -1478,22 +1557,17 @@ async function openForm(row = null) {
             <label>Fecha vencimiento
               <input name="expiry_date" type="date" required value="${row?.expiry_date || addOneMonth(todayISO())}">
             </label>
-            <label>Precio de venta
-              <input name="sale_price" type="number" min="0" step="0.01" value="${row?.sale_price ?? ''}">
-              <select name="sale_price_currency">
-                <option value="PEN">PEN (S/)</option>
-                <option value="USDT" ${isUSDT(row?.sale_price_currency) ? 'selected' : ''}>USDT</option>
-              </select>
-              <input name="sale_price_exchange_rate" type="number" min="0" step="0.0001" placeholder="TC S/ por 1 USDT" value="${row?.sale_price_exchange_rate ?? ''}" ${isUSDT(row?.sale_price_currency) ? '' : 'hidden'}>
-            </label>
-            <label>Costo
-              <input name="cost" type="number" min="0" step="0.01" value="${row?.cost ?? ''}">
-              <select name="cost_currency">
-                <option value="PEN">PEN (S/)</option>
-                <option value="USDT" ${isUSDT(row?.cost_currency) ? 'selected' : ''}>USDT</option>
-              </select>
-              <input name="cost_exchange_rate" type="number" min="0" step="0.0001" placeholder="TC S/ por 1 USDT" value="${row?.cost_exchange_rate ?? ''}" ${isUSDT(row?.cost_currency) ? '' : 'hidden'}>
-            </label>
+                        ${createFinancialBlock('sale', 'Precio de venta', row)}
+            ${createFinancialBlock('cost', 'Costo', row)}
+
+            <div class="financial-summary-card span-2">
+              <div class="summary-line"><span>Venta</span> <span id="summary_sale">S/ 0.00</span></div>
+              <div class="summary-line"><span>Costo</span> <span id="summary_cost">S/ 0.00</span></div>
+              <div class="summary-line summary-profit">
+                <span>Ganancia estimada</span>
+                <span id="summary_profit">S/ 0.00</span>
+              </div>
+            </div>
             <label class="span-2">Proveedor
               <input name="provider" value="${escapeHtml(row?.provider || '')}">
             </label>
@@ -1514,7 +1588,9 @@ async function openForm(row = null) {
       </section>
     </div>`
 
-  const close = () => { host.innerHTML = ''; editingId = null }
+  const close = () => { host.innerHTML = ''; editingId = null };
+  const form = host.querySelector('form');
+  if (form) bindFinancialEvents(form);
   document.querySelector('#closeModal').addEventListener('click', close)
   document.querySelector('#cancelModal').addEventListener('click', close)
   document.querySelector('#backdrop').addEventListener('click', (e) => {
@@ -1802,10 +1878,38 @@ async function saveForm(event) {
     notes: String(fd.get('notes')).trim() || null,
   }
 
-  const query = editingId
-    ? supabase.from('subscriptions').update(payload).eq('id', editingId)
-    : supabase.from('subscriptions').insert(payload)
-  const { error } = await query
+  let error = null
+  if (editingId) {
+    if (payload.sale_price_currency === 'PEN') payload.sale_price_exchange_rate = null
+    if (payload.cost_currency === 'PEN') payload.cost_exchange_rate = null
+    const res = await supabase.from('subscriptions').update(payload).eq('id', editingId)
+    error = res.error
+  } else {
+    const res = await supabase.rpc('create_subscription', {
+      p_client_name: payload.client_name,
+      p_phone: payload.phone,
+      p_service: payload.service,
+      p_username_email: payload.username_email,
+      p_password: payload.password,
+      p_profile: payload.profile,
+      p_pin: payload.pin,
+      p_access_url: payload.access_url,
+      p_sale_price: payload.sale_price,
+      p_cost: payload.cost,
+      p_sale_currency: payload.sale_price_currency,
+      p_cost_currency: payload.cost_currency,
+      p_sale_exchange_rate: payload.sale_price_currency === 'PEN' ? null : payload.sale_price_exchange_rate,
+      p_cost_exchange_rate: payload.cost_currency === 'PEN' ? null : payload.cost_exchange_rate,
+      p_provider: payload.provider,
+      p_start_date: payload.start_date,
+      p_expiry_date: payload.expiry_date,
+      p_provider_expiry_date: payload.provider_expiry_date,
+      p_extras: payload.extras,
+      p_notes: payload.notes,
+      p_idempotency_key: currentFormIdempotencyKey
+    })
+    error = res.error
+  }
 
   if (error) {
     submit.disabled = false
@@ -1887,3 +1991,98 @@ async function boot() {
 }
 
 boot()
+
+function createFinancialBlock(prefix, title, row) {
+  const price = row?.[prefix + '_price'] ?? (prefix==='cost' ? row?.cost : null) ?? '';
+  const currency = row?.[prefix + '_price_currency'] ?? (prefix==='cost' ? row?.cost_currency : null) ?? 'PEN';
+  const rate = row?.[prefix + '_price_exchange_rate'] ?? (prefix==='cost' ? row?.cost_exchange_rate : null) ?? '';
+  const isUsdt = currency === 'USDT';
+
+  return `
+    <div class="financial-group">
+      <label for="${prefix}_price_input">${title}</label>
+
+      <div class="financial-input-row">
+        <span class="currency-prefix" id="${prefix}_prefix">${isUsdt ? 'USDT' : 'S/'}</span>
+        <input id="${prefix}_price_input" name="${prefix==='sale' ? 'sale_price' : 'cost'}" type="number" inputmode="decimal" min="0" step="0.01" value="${price}" placeholder="0.00">
+
+        <div class="segmented-control" role="radiogroup">
+          <input type="radio" class="sr-only" id="${prefix}_pen" name="${prefix==='sale' ? 'sale_price_currency' : 'cost_currency'}" value="PEN" ${!isUsdt ? 'checked' : ''}>
+          <label for="${prefix}_pen">PEN</label>
+
+          <input type="radio" class="sr-only" id="${prefix}_usdt" name="${prefix==='sale' ? 'sale_price_currency' : 'cost_currency'}" value="USDT" ${isUsdt ? 'checked' : ''}>
+          <label for="${prefix}_usdt">USDT</label>
+        </div>
+      </div>
+
+      <div class="financial-subrow-grid">
+        <div id="${prefix}_pen_info" class="subrow-state state-pen ${!isUsdt ? 'active' : ''}">
+          <span>Equivalente</span>
+          <strong class="equiv-amount" id="${prefix}_equiv_pen">S/ 0.00</strong>
+        </div>
+
+        <div id="${prefix}_usdt_info" class="subrow-state state-usdt ${isUsdt ? 'active' : ''}">
+          <span class="tc-wrapper">
+            TC 1 USDT = S/
+            <input name="${prefix==='sale' ? 'sale_price_exchange_rate' : 'cost_exchange_rate'}" type="number" class="tc-input" inputmode="decimal" step="0.0001" value="${rate}">
+          </span>
+          <strong class="equiv-amount" id="${prefix}_equiv_usdt">Ingresa el tipo de cambio</strong>
+        </div>
+      </div>
+      ${prefix === 'cost' ? '<button type="button" id="copy_tc_btn" class="btn btn-small btn-ghost" style="display:none; margin-top:4px;">Copiar TC de venta</button>' : ''}
+    </div>
+  `;
+}
+
+function bindFinancialEvents(form) {
+  const saleInput = form.querySelector('input[name="sale_price"]');
+  const costInput = form.querySelector('input[name="cost"]');
+  const saleTCR = form.querySelector('input[name="sale_price_exchange_rate"]');
+  const costTCR = form.querySelector('input[name="cost_exchange_rate"]');
+  const copyBtn = form.querySelector('#copy_tc_btn');
+
+  function update() {
+    let saleVal = Number(saleInput.value) || 0;
+    let costVal = Number(costInput.value) || 0;
+    let saleC = form.querySelector('input[name="sale_price_currency"]:checked').value;
+    let costC = form.querySelector('input[name="cost_currency"]:checked').value;
+
+    form.querySelector('#sale_prefix').textContent = saleC === 'USDT' ? 'USDT' : 'S/';
+    form.querySelector('#sale_pen_info').classList.toggle('active', saleC === 'PEN');
+    form.querySelector('#sale_usdt_info').classList.toggle('active', saleC === 'USDT');
+
+    form.querySelector('#cost_prefix').textContent = costC === 'USDT' ? 'USDT' : 'S/';
+    form.querySelector('#cost_pen_info').classList.toggle('active', costC === 'PEN');
+    form.querySelector('#cost_usdt_info').classList.toggle('active', costC === 'USDT');
+
+    if (copyBtn) copyBtn.style.display = (saleC === 'USDT' && costC === 'USDT') ? 'inline-block' : 'none';
+
+    let saleTC = Number(saleTCR.value) || 0;
+    let costTC = Number(costTCR.value) || 0;
+
+    let salePenCalc = saleC === 'PEN' ? saleVal : (saleTC > 0 ? saleVal * saleTC : 0);
+    let costPenCalc = costC === 'PEN' ? costVal : (costTC > 0 ? costVal * costTC : 0);
+
+    form.querySelector('#sale_equiv_pen').textContent = 'S/ ' + salePenCalc.toFixed(2);
+    if (saleC === 'USDT') {
+      form.querySelector('#sale_equiv_usdt').textContent = saleTC > 0 ? '≈ S/ ' + salePenCalc.toFixed(2) : 'Ingresa el tipo de cambio';
+    }
+
+    form.querySelector('#cost_equiv_pen').textContent = 'S/ ' + costPenCalc.toFixed(2);
+    if (costC === 'USDT') {
+      form.querySelector('#cost_equiv_usdt').textContent = costTC > 0 ? '≈ S/ ' + costPenCalc.toFixed(2) : 'Ingresa el tipo de cambio';
+    }
+
+    form.querySelector('#summary_sale').textContent = 'S/ ' + salePenCalc.toFixed(2);
+    form.querySelector('#summary_cost').textContent = 'S/ ' + costPenCalc.toFixed(2);
+    form.querySelector('#summary_profit').textContent = 'S/ ' + (salePenCalc - costPenCalc).toFixed(2);
+  }
+
+  form.addEventListener('input', update);
+  form.addEventListener('change', update);
+  if (copyBtn) copyBtn.addEventListener('click', () => {
+    costTCR.value = saleTCR.value;
+    update();
+  });
+  update();
+}

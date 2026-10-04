@@ -35,3 +35,5 @@ export const OWNERS_BY_ID = {
   '3d8f71db-5e06-4859-92d6-acb57e90b74b': 'Alex',
   '742a761c-983e-41ba-864f-9394514d98f5': 'Liz',
 }
+
+export const FINANCIAL_HISTORY_START = '2026-10-04'
