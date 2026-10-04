@@ -37,6 +37,26 @@ styleEl.textContent = `
 `
 document.head.appendChild(styleEl)
 
+// Close any open card dropdown on click outside or Escape
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.card-menu-wrap')) {
+    document.querySelectorAll('.card-dropdown:not(.hidden)').forEach((d) => {
+      d.classList.add('hidden')
+      const pb = d.closest('.card-menu-wrap')?.querySelector('.card-menu-btn')
+      if (pb) pb.setAttribute('aria-expanded', 'false')
+    })
+  }
+})
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.card-dropdown:not(.hidden)').forEach((d) => {
+      d.classList.add('hidden')
+      const pb = d.closest('.card-menu-wrap')?.querySelector('.card-menu-btn')
+      if (pb) pb.setAttribute('aria-expanded', 'false')
+    })
+  }
+})
+
 let session = null
 let rows = []
 let products = []
@@ -369,25 +389,33 @@ function appShell() {
         </section>
         <section id="kpis" class="kpis"></section>
         <section class="toolbar">
-          <input id="searchInput" type="search" placeholder="Buscar cliente, celular, servicio, correo...">
-          <select id="serviceFilter"></select>
-          <select id="ownerFilter">
-            <option value="TODOS">Todos</option>
-            <option value="Alex">Alex</option>
-            <option value="Liz">Liz</option>
-          </select>
-          <select id="statusFilter">
-            <option value="TODOS">Todos los estados</option>
-            <option value="activo">Activos</option>
-            <option value="proximo">Próximos (1–3 días)</option>
-            <option value="hoy">Vencen hoy</option>
-            <option value="vencido">Vencidos</option>
-            <option value="sin-fecha">Sin fecha</option>
-          </select>
-          <select id="totalViewFilter" title="Moneda de los totales principales">
-            <option value="PEN">Totales en S/</option>
-            <option value="USDT">Totales en USDT</option>
-          </select>
+          <div class="search-box">
+            <span class="search-icon" aria-hidden="true">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+            </span>
+            <input id="searchInput" type="search" placeholder="Buscar cliente, celular, servicio, correo...">
+            <button id="searchClearBtn" class="search-clear hidden" type="button" title="Limpiar búsqueda" aria-label="Limpiar búsqueda"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+          </div>
+          <div class="filter-controls">
+            <select id="serviceFilter" class="filter-select" title="Filtrar por servicio"></select>
+            <select id="statusFilter" class="filter-select" title="Filtrar por estado">
+              <option value="TODOS">Estado: Todos</option>
+              <option value="activo">Estado: Activos</option>
+              <option value="proximo">Estado: Próximos</option>
+              <option value="hoy">Estado: Vencen hoy</option>
+              <option value="vencido">Estado: Vencidos</option>
+              <option value="sin-fecha">Estado: Sin fecha</option>
+            </select>
+            <select id="ownerFilter" class="filter-select" title="Filtrar por propietario">
+              <option value="TODOS">Propietario: Todos</option>
+              <option value="Alex">Propietario: Alex</option>
+              <option value="Liz">Propietario: Liz</option>
+            </select>
+            <select id="totalViewFilter" class="filter-select" title="Moneda de los totales principales">
+              <option value="PEN">Totales: S/</option>
+              <option value="USDT">Totales: USDT</option>
+            </select>
+          </div>
         </section>
         <div id="usdtRateBox" class="toolbar rate-box hidden">
           <label class="rate-label">TC S/ por 1 USDT
@@ -423,10 +451,27 @@ function appShell() {
     updateViewButtons()
     renderData()
   })
-  document.querySelector('#searchInput').addEventListener('input', (e) => {
+  const searchInput = document.querySelector('#searchInput')
+  const searchClearBtn = document.querySelector('#searchClearBtn')
+
+  searchInput.addEventListener('input', (e) => {
     filters.search = e.target.value
+    if (searchClearBtn) {
+      searchClearBtn.classList.toggle('hidden', !e.target.value.trim())
+    }
     renderData()
   })
+
+  if (searchClearBtn) {
+    searchClearBtn.addEventListener('click', () => {
+      searchInput.value = ''
+      filters.search = ''
+      searchClearBtn.classList.add('hidden')
+      searchInput.focus()
+      renderData()
+    })
+  }
+
   document.querySelector('#serviceFilter').addEventListener('change', (e) => {
     filters.service = e.target.value
     renderData()
@@ -442,6 +487,10 @@ function appShell() {
   // Vista de totales: PEN (predeterminado) o USDT (solo presentación).
   document.querySelector('#totalViewFilter').addEventListener('change', (e) => {
     totalView = e.target.value
+    const rateBox = document.querySelector('#usdtRateBox')
+    if (rateBox) {
+      rateBox.classList.toggle('hidden', totalView !== 'USDT')
+    }
     if (totalView === 'USDT' && !(Number(usdtViewRate) > 0)) {
       // Sugiere el último TC registrado en una operación USDT, si existe.
       const suggestion = latestUSDTExchangeRate()
@@ -558,7 +607,7 @@ function renderFilters() {
   if (!select) return
   const current = filters.service
   const opts = getCachedServiceOptions()
-  select.innerHTML = `<option value="TODOS">Todos los servicios</option>${opts
+  select.innerHTML = `<option value="TODOS">Servicio: Todos</option>${opts
     .map((s) => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`)
     .join('')}`
   select.value = opts.includes(current) ? current : 'TODOS'
@@ -652,6 +701,16 @@ function renderData() {
   renderFilters()
   renderKpis()
   updateViewButtons()
+
+  const sFilter = document.querySelector('#serviceFilter')
+  const stFilter = document.querySelector('#statusFilter')
+  const oFilter = document.querySelector('#ownerFilter')
+  const tFilter = document.querySelector('#totalViewFilter')
+  if (sFilter) sFilter.classList.toggle('filter-active', filters.service !== 'TODOS')
+  if (stFilter) stFilter.classList.toggle('filter-active', filters.status !== 'TODOS')
+  if (oFilter) oFilter.classList.toggle('filter-active', filters.owner !== 'TODOS')
+  if (tFilter) tFilter.classList.toggle('filter-active', totalView !== 'PEN')
+
   const data = filteredRows()
   const cards = document.querySelector('#cards')
 
@@ -700,10 +759,10 @@ function cardHtml(row) {
   return `
     <article class="card" data-id="${row.id}">
       <div class="card-head">
-        <div>
+        <div class="card-head-info">
           <div class="service-pill"><span class="service-dot"></span>${escapeHtml(row.service || 'SIN SERVICIO')}</div>
           <h3 class="client">${escapeHtml(row.client_name || 'Sin nombre')}</h3>
-          <div class="phone"><span class="phone-icon">📞</span> ${escapeHtml(row.phone || 'Sin celular')}</div>
+          <div class="phone"><span class="phone-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg></span> ${escapeHtml(row.phone || 'Sin celular')}</div>
         </div>
         <div class="card-badge-wrap">
           <span class="badge badge-${status.tone}">${escapeHtml(status.label)}</span>
@@ -728,9 +787,9 @@ function cardHtml(row) {
       </div>
 
       <div class="meta-details-grid">
-        <div class="meta-box">
-          <span>Vencimiento</span>
-          <strong>📅 ${formatDate(row.expiry_date)}</strong>
+<div class="meta-box">
+            <span>Vencimiento</span>
+            <strong><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> ${formatDate(row.expiry_date)}</strong>
         </div>
         <div class="meta-box">
           <span>Proveedor</span>
@@ -746,17 +805,27 @@ function cardHtml(row) {
       </div>
 
       <div class="card-actions">
-        <div class="card-actions-row card-actions-top">
-          <button type="button" class="btn btn-small copy-all btn-action-copy" title="Copiar todos los accesos">📋 Copiar todo</button>
-          <button type="button" class="btn btn-small whatsapp-reminder btn-action-cobrar" title="Enviar recordatorio / cobro por WhatsApp">💰 Cobrar</button>
-          <button type="button" class="btn btn-small whatsapp-update btn-action-actualizar" title="Enviar actualización por WhatsApp">🔄 Actualizar</button>
-          <button type="button" class="btn btn-small whatsapp-data btn-action-datos" title="Enviar datos por WhatsApp">💻 Datos</button>
+        <div class="card-actions-primary">
+          <button type="button" class="btn btn-small renew btn-action-renovar" title="Extender período"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> Renovar</button>
+          <button type="button" class="btn btn-small whatsapp-reminder btn-action-cobrar" title="Enviar recordatorio / cobro por WhatsApp"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg> Cobrar</button>
+          <button type="button" class="btn btn-small copy-all btn-action-copy" title="Copiar todos los accesos"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> Copiar</button>
         </div>
-        <div class="card-actions-row card-actions-bottom">
-          <button type="button" class="btn btn-small renew btn-action-renovar" title="Extender período">📅 Renovar</button>
-          <div class="card-actions-group">
-            <button type="button" class="btn btn-small edit btn-action-edit" title="Editar suscripción">✏️ Editar</button>
-            <button type="button" class="btn btn-small btn-danger delete btn-action-delete" title="Eliminar suscripción">🗑️ Eliminar</button>
+        <div class="card-menu-wrap">
+          <button type="button" class="btn btn-small btn-ghost card-menu-btn" title="Más acciones" aria-haspopup="true" aria-expanded="false">•••</button>
+          <div class="card-dropdown hidden" role="menu">
+            <button type="button" class="card-dropdown-item whatsapp-update" role="menuitem">
+              <span class="dropdown-item-icon">🔄</span> Actualizar datos
+            </button>
+            <button type="button" class="card-dropdown-item whatsapp-data" role="menuitem">
+              <span class="dropdown-item-icon">💻</span> Enviar datos
+            </button>
+            <div class="card-dropdown-divider"></div>
+            <button type="button" class="card-dropdown-item edit" role="menuitem">
+              <span class="dropdown-item-icon">✏️</span> Editar suscripción
+            </button>
+            <button type="button" class="card-dropdown-item delete card-dropdown-danger" role="menuitem">
+              <span class="dropdown-item-icon">🗑️</span> Dar de baja
+            </button>
           </div>
         </div>
       </div>
@@ -783,16 +852,41 @@ function bindCardEvents() {
   document.querySelectorAll('.card').forEach((card) => {
     const row = rowById(card.dataset.id)
     if (!row) return
-    card.querySelector('.copy-all').addEventListener('click', async () => {
+    card.querySelector('.copy-all')?.addEventListener('click', async () => {
       await copyText(credentialsPlain(row))
       toast('Credenciales copiadas.')
     })
-    card.querySelector('.whatsapp-reminder').addEventListener('click', () => safeWhatsapp(row, reminderText(row)))
-    card.querySelector('.whatsapp-update').addEventListener('click', () => safeWhatsapp(row, updateText(row)))
-    card.querySelector('.whatsapp-data').addEventListener('click', () => safeWhatsapp(row, credentialsText(row)))
-    card.querySelector('.renew').addEventListener('click', () => openRenewModal(row))
-    card.querySelector('.edit').addEventListener('click', () => openForm(row))
-    card.querySelector('.delete').addEventListener('click', () => deleteRow(row))
+    card.querySelector('.whatsapp-reminder')?.addEventListener('click', () => safeWhatsapp(row, reminderText(row)))
+    card.querySelector('.whatsapp-update')?.addEventListener('click', () => safeWhatsapp(row, updateText(row)))
+    card.querySelector('.whatsapp-data')?.addEventListener('click', () => safeWhatsapp(row, credentialsText(row)))
+    card.querySelector('.renew')?.addEventListener('click', () => openRenewModal(row))
+    card.querySelector('.edit')?.addEventListener('click', () => openForm(row))
+    card.querySelector('.delete')?.addEventListener('click', () => deleteRow(row))
+
+    const menuBtn = card.querySelector('.card-menu-btn')
+    const dropdown = card.querySelector('.card-dropdown')
+    if (menuBtn && dropdown) {
+      menuBtn.addEventListener('click', (e) => {
+        e.stopPropagation()
+        const isHidden = dropdown.classList.contains('hidden')
+        document.querySelectorAll('.card-dropdown:not(.hidden)').forEach((d) => {
+          if (d !== dropdown) {
+            d.classList.add('hidden')
+            const b = d.closest('.card-menu-wrap')?.querySelector('.card-menu-btn')
+            if (b) b.setAttribute('aria-expanded', 'false')
+          }
+        })
+        dropdown.classList.toggle('hidden', !isHidden)
+        menuBtn.setAttribute('aria-expanded', String(isHidden))
+      })
+
+      dropdown.querySelectorAll('.card-dropdown-item').forEach((item) => {
+        item.addEventListener('click', () => {
+          dropdown.classList.add('hidden')
+          menuBtn.setAttribute('aria-expanded', 'false')
+        })
+      })
+    }
   })
 }
 
@@ -1007,25 +1101,38 @@ function openRenewModal(row) {
           <button id="closeModal" class="btn btn-small btn-ghost">✕</button>
         </div>
         <div class="modal-body">
-          <p class="renew-current">Vence el: ${formatDateStr(row.expiry_date)}</p>
+          <p class="renew-current">Vence el: ${formatDate(row.expiry_date)}</p>
           <div class="renew-grid">
-            <button class="btn btn-primary renew-option" onclick="renewRow('${row.id}', '7 days')">+ 7 días</button>
-            <button class="btn btn-primary renew-option" onclick="renewRow('${row.id}', '15 days')">+ 15 días</button>
-            <button class="btn btn-primary renew-option" onclick="renewRow('${row.id}', '1 month')">+ 1 mes</button>
-            <button class="btn btn-primary renew-option" onclick="renewRow('${row.id}', '3 months')">+ 3 meses</button>
-            <button class="btn btn-primary renew-option" onclick="renewRow('${row.id}', '6 months')">+ 6 meses</button>
-            <button class="btn btn-primary renew-option" onclick="renewRow('${row.id}', '12 months')">+ 12 meses</button>
+            <button type="button" class="btn btn-primary renew-option" data-period="7 days">+ 7 días</button>
+            <button type="button" class="btn btn-primary renew-option" data-period="15 days">+ 15 días</button>
+            <button type="button" class="btn btn-primary renew-option" data-period="1 month">+ 1 mes</button>
+            <button type="button" class="btn btn-primary renew-option" data-period="3 months">+ 3 meses</button>
+            <button type="button" class="btn btn-primary renew-option" data-period="6 months">+ 6 meses</button>
+            <button type="button" class="btn btn-primary renew-option" data-period="12 months">+ 12 meses</button>
           </div>
         </div>
       </section>
     </div>
   `
 
-  document.getElementById('closeModal').addEventListener('click', () => {
+  const close = () => {
     host.innerHTML = '';
     currentRenewIdempotencyKey = null;
+  }
+
+  document.getElementById('closeModal')?.addEventListener('click', close)
+  document.getElementById('backdrop')?.addEventListener('click', (e) => {
+    if (e.target.id === 'backdrop') close()
+  })
+
+  host.querySelectorAll('.renew-option').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      renewRow(row, btn.dataset.period)
+    })
   })
 }
+
+window.renewRow = renewRow;
 
 async function renewRow(rowOrId, period) {
   const rowId = typeof rowOrId === 'object' ? rowOrId.id : rowOrId;
