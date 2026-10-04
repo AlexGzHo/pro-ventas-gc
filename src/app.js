@@ -1,6 +1,6 @@
 import './styles.css'
 import { supabase, isConfigured } from './supabase.js'
-import { SERVICES, credentialLabels, OWNERS_BY_ID } from './constants.js'
+import { SERVICES, credentialLabels, OWNERS_BY_ID, FINANCIAL_HISTORY_START } from './constants.js'
 import {
   addOneMonth,
   addPeriod,
@@ -45,6 +45,7 @@ let productsLoadingPromise = null
 let catalogAbortController = null
 let catalogRenderId = 0
 let editingId = null
+let currentFormIdempotencyKey = null
 let filters = { search: '', service: 'TODOS', status: 'TODOS', owner: 'TODOS' }
 let loading = false
 // Vista de suscripciones: 'cards' (predeterminado) o 'summary' (tabla compacta).
@@ -1903,7 +1904,7 @@ async function saveForm(event) {
       p_provider: payload.provider,
       p_start_date: payload.start_date,
       p_expiry_date: payload.expiry_date,
-      p_provider_expiry_date: payload.provider_expiry_date,
+      p_provider_expiry_date: payload.provider_expiry_date ?? null,
       p_extras: payload.extras,
       p_notes: payload.notes,
       p_idempotency_key: currentFormIdempotencyKey
@@ -1955,6 +1956,7 @@ async function boot() {
   }
 
   supabase.auth.onAuthStateChange(async (event, nextSession) => {
+    const previousSession = session
     session = nextSession
 
     if (event === 'PASSWORD_RECOVERY') {
@@ -1967,7 +1969,7 @@ async function boot() {
       return
     }
 
-    const changed = session?.access_token !== nextSession?.access_token
+    const changed = previousSession?.access_token !== nextSession?.access_token
     if (!changed) return
 
     if (!session) {
