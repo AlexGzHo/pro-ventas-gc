@@ -524,6 +524,108 @@ textarea:focus-visible {
 }
 
 /* ==========================================================================
+   Quick Views Strip (Vistas Rápidas de Suscripciones)
+   Design Reference: docs/DESIGN.md — Compact Precision Pills
+   ========================================================================== */
+.quick-views {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  margin: -4px 0 14px;
+  padding: 2px 0;
+}
+
+.quick-views::-webkit-scrollbar {
+  display: none;
+}
+
+.quick-view-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-buttons);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.quick-view-btn:hover {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+  background: var(--bg-card-hover);
+}
+
+.quick-view-btn:focus-visible {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px var(--color-brand-ring);
+}
+
+.quick-view-btn.active {
+  background: var(--color-brand);
+  border-color: var(--color-brand);
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.35);
+}
+
+.quick-view-label {
+  line-height: 1;
+}
+
+.quick-view-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  border-radius: var(--radius-pills);
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text-muted);
+  transition: all 0.15s ease;
+}
+
+.quick-view-btn:hover .quick-view-count {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.quick-view-btn.active .quick-view-count {
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+}
+
+/* Indicadores sutiles de atención cuando está inactivo */
+.quick-view-btn.tone-warning:not(.active) .quick-view-count {
+  background: var(--status-warning-bg);
+  color: var(--status-warning-text);
+  border: 1px solid var(--status-warning-border);
+}
+
+.quick-view-btn.tone-danger:not(.active) .quick-view-count {
+  background: var(--status-danger-bg);
+  color: var(--status-danger-text);
+  border: 1px solid var(--status-danger-border);
+}
+
+/* ==========================================================================
    Results Bar & View Toggle
    ========================================================================== */
 .results-bar {
@@ -1799,5 +1901,21 @@ textarea {
   }
   .filter-controls {
     grid-template-columns: 1fr 1fr;
+  }
+  .quick-views {
+    margin: -2px 0 12px;
+    padding-bottom: 4px;
+    gap: 5px;
+  }
+  .quick-view-btn {
+    height: 29px;
+    padding: 0 8px;
+    font-size: 11.5px;
+  }
+  .quick-view-count {
+    min-width: 17px;
+    height: 17px;
+    font-size: 10.5px;
+    padding: 0 4px;
   }
 }

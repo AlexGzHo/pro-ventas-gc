@@ -8,6 +8,7 @@ import {
   amountInUSDT,
   copyText,
   currencyLabel,
+  daysUntil,
   escapeHtml,
   formatDate,
   formatAmount,
@@ -66,7 +67,7 @@ let catalogAbortController = null
 let catalogRenderId = 0
 let editingId = null
 let currentFormIdempotencyKey = null
-let filters = { search: '', service: 'TODOS', status: 'TODOS', owner: 'TODOS' }
+let filters = { search: '', service: 'TODOS', status: 'TODOS', owner: 'TODOS', quickView: 'all' }
 let loading = false
 // Vista de suscripciones: 'cards' (predeterminado) o 'summary' (tabla compacta).
 let currentView = localStorage.getItem('pv_view_mode') || 'cards'
@@ -417,6 +418,7 @@ function appShell() {
             </select>
           </div>
         </section>
+        <div id="quickViews" class="quick-views" role="group" aria-label="Vistas rápidas de vencimiento"></div>
         <div id="usdtRateBox" class="toolbar rate-box hidden">
           <label class="rate-label">TC S/ por 1 USDT
             <input id="usdtRateInput" type="number" min="0" step="0.0001" placeholder="Ej. 3.75">
@@ -478,6 +480,9 @@ function appShell() {
   })
   document.querySelector('#statusFilter').addEventListener('change', (e) => {
     filters.status = e.target.value
+    if (filters.status !== 'TODOS') {
+      filters.quickView = 'all'
+    }
     renderData()
   })
   document.querySelector('#ownerFilter').addEventListener('change', (e) => {
@@ -613,6 +618,105 @@ function renderFilters() {
   select.value = opts.includes(current) ? current : 'TODOS'
 }
 
+function matchesQuickView(row, view) {
+  const days = daysUntil(row.expiry_date)
+  if (view === 'today') {
+    return days === 0
+  }
+  if (view === 'next7') {
+    return days !== null && days > 0 && days <= 7
+  }
+  if (view === 'expired') {
+    return days !== null && days < 0
+  }
+  return true
+}
+
+function quickViewCounts() {
+  const q = filters.search.trim().toLowerCase()
+  const baseRows = rows.filter((row) => {
+    const haystack = [
+      row.client_name,
+      row.phone,
+      row.service,
+      row.username_email,
+      row.provider,
+      row.notes,
+    ].join(' ').toLowerCase()
+
+    const searchOk = !q || haystack.includes(q)
+    const serviceOk = filters.service === 'TODOS' || row.service === filters.service
+    const ownerOk = filters.owner === 'TODOS' || ownerNameForRow(row) === filters.owner
+    return searchOk && serviceOk && ownerOk
+  })
+
+  let today = 0
+  let next7 = 0
+  let expired = 0
+
+  baseRows.forEach((row) => {
+    const days = daysUntil(row.expiry_date)
+    if (days === 0) today++
+    if (days !== null && days > 0 && days <= 7) next7++
+    if (days !== null && days < 0) expired++
+  })
+
+  return {
+    all: baseRows.length,
+    today,
+    next7,
+    expired,
+  }
+}
+
+function renderQuickViews() {
+  const container = document.querySelector('#quickViews')
+  if (!container) return
+
+  const counts = quickViewCounts()
+  const current = filters.quickView || 'all'
+
+  const views = [
+    { key: 'all', label: 'Todas', count: counts.all },
+    { key: 'today', label: 'Vencen hoy', count: counts.today, tone: counts.today > 0 ? 'warning' : '' },
+    { key: 'next7', label: 'Próximos 7 días', count: counts.next7 },
+    { key: 'expired', label: 'Vencidas', count: counts.expired, tone: counts.expired > 0 ? 'danger' : '' },
+  ]
+
+  container.innerHTML = views
+    .map(
+      (v) => `
+      <button
+        type="button"
+        class="quick-view-btn ${v.key === current ? 'active' : ''} ${v.tone ? `tone-${v.tone}` : ''}"
+        data-quick-view="${v.key}"
+        aria-pressed="${v.key === current}"
+      >
+        <span class="quick-view-label">${escapeHtml(v.label)}</span>
+        <span class="quick-view-count">${v.count}</span>
+      </button>`
+    )
+    .join('')
+
+  container.querySelectorAll('.quick-view-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const targetView = btn.dataset.quickView
+      if (filters.quickView === targetView) return
+
+      filters.quickView = targetView
+      if (targetView !== 'all' && filters.status !== 'TODOS') {
+        filters.status = 'TODOS'
+        const stFilter = document.querySelector('#statusFilter')
+        if (stFilter) {
+          stFilter.value = 'TODOS'
+          stFilter.classList.remove('filter-active')
+        }
+      }
+      renderData()
+    })
+  })
+}
+
 function filteredRows() {
   const q = filters.search.trim().toLowerCase()
   return rows.filter((row) => {
@@ -630,7 +734,8 @@ function filteredRows() {
     const serviceOk = filters.service === 'TODOS' || row.service === filters.service
     const statusOk = filters.status === 'TODOS' || status.key === filters.status
     const ownerOk = filters.owner === 'TODOS' || ownerNameForRow(row) === filters.owner
-    return searchOk && serviceOk && statusOk && ownerOk
+    const quickOk = matchesQuickView(row, filters.quickView)
+    return searchOk && serviceOk && statusOk && ownerOk && quickOk
   })
 }
 
@@ -699,6 +804,7 @@ function kpi(label, value) {
 
 function renderData() {
   renderFilters()
+  renderQuickViews()
   renderKpis()
   updateViewButtons()
 
@@ -718,7 +824,8 @@ function renderData() {
     filters.search.trim() ||
     filters.service !== 'TODOS' ||
     filters.status !== 'TODOS' ||
-    filters.owner !== 'TODOS'
+    filters.owner !== 'TODOS' ||
+    filters.quickView !== 'all'
   ) || data.length !== rows.length
 
   const count = data.length
@@ -814,17 +921,17 @@ function cardHtml(row) {
           <button type="button" class="btn btn-small btn-ghost card-menu-btn" title="Más acciones" aria-haspopup="true" aria-expanded="false">•••</button>
           <div class="card-dropdown hidden" role="menu">
             <button type="button" class="card-dropdown-item whatsapp-update" role="menuitem">
-              <span class="dropdown-item-icon">🔄</span> Actualizar datos
+              <span class="dropdown-item-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg></span> Actualizar datos
             </button>
             <button type="button" class="card-dropdown-item whatsapp-data" role="menuitem">
-              <span class="dropdown-item-icon">💻</span> Enviar datos
+              <span class="dropdown-item-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span> Enviar datos
             </button>
             <div class="card-dropdown-divider"></div>
             <button type="button" class="card-dropdown-item edit" role="menuitem">
-              <span class="dropdown-item-icon">✏️</span> Editar suscripción
+              <span class="dropdown-item-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></span> Editar suscripción
             </button>
             <button type="button" class="card-dropdown-item delete card-dropdown-danger" role="menuitem">
-              <span class="dropdown-item-icon">🗑️</span> Dar de baja
+              <span class="dropdown-item-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></span> Dar de baja
             </button>
           </div>
         </div>
@@ -840,7 +947,7 @@ function credentialHtml(id, key, value) {
         <span class="cred-label">${escapeHtml(credentialLabels[key] || key)}</span>
         <code class="cred-value">${escapeHtml(display)}</code>
       </div>
-      <button type="button" class="btn btn-small copy-field" data-key="${key}" data-id="${id}" title="Copiar ${escapeHtml(credentialLabels[key] || key)}">📋 Copiar</button>
+      <button type="button" class="btn btn-small copy-field" data-key="${key}" data-id="${id}" title="Copiar ${escapeHtml(credentialLabels[key] || key)}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> Copiar</button>
     </div>`
 }
 
@@ -939,7 +1046,7 @@ function summaryRowHtml(row) {
         ${email ? `
           <div class="summary-email-cell">
             <span class="summary-email" title="${email}">${email}</span>
-            <button type="button" class="btn btn-ghost btn-small copy-email-btn" data-email="${email}" title="Copiar correo">📋</button>
+            <button type="button" class="btn btn-ghost btn-small copy-email-btn" data-email="${email}" title="Copiar correo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg></button>
           </div>
         ` : '<span class="text-muted">—</span>'}
       </td>
@@ -950,12 +1057,12 @@ function summaryRowHtml(row) {
       </td>
       <td>
         <div class="summary-actions-cell">
-          <button type="button" class="btn btn-small btn-whatsapp-renew" data-id="${row.id}" title="Enviar recordatorio / renovación por WhatsApp">💬 WhatsApp</button>
-          <button type="button" class="btn btn-small renew-modal-btn" data-id="${row.id}" title="Extender período">↻ Extender</button>
+          <button type="button" class="btn btn-small btn-whatsapp-renew" data-id="${row.id}" title="Enviar recordatorio / renovación por WhatsApp"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg> WhatsApp</button>
+          <button type="button" class="btn btn-small renew-modal-btn" data-id="${row.id}" title="Extender período"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg> Extender</button>
         </div>
       </td>
       <td>
-        <button type="button" class="btn btn-small creds-modal-btn" data-id="${row.id}">🔑 Ver accesos</button>
+        <button type="button" class="btn btn-small creds-modal-btn" data-id="${row.id}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"></circle><path d="M21 21l-4.35-4.35"></path></svg> Ver accesos</button>
       </td>
       <td>
         <span class="summary-owner-tag owner-${escapeHtml(owner.toLowerCase())}">${escapeHtml(owner)}</span>
@@ -1025,7 +1132,7 @@ function openCredentialsModal(row) {
             <h3>Datos de acceso</h3>
             <p class="modal-subtitle">${escapeHtml(row.client_name || 'Cliente')} · ${escapeHtml(row.service || 'Servicio')}</p>
           </div>
-          <button id="closeCredsModal" class="btn btn-small btn-ghost" type="button">✕</button>
+          <button id="closeCredsModal" class="btn btn-small btn-ghost" type="button"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
         </div>
         <div class="modal-body">
           ${creds.length || extras.length ? `
@@ -1036,7 +1143,7 @@ function openCredentialsModal(row) {
                     <span class="cred-label">${escapeHtml(credentialLabels[key] || key)}</span>
                     <code class="cred-value">${escapeHtml(value)}</code>
                   </div>
-                  <button type="button" class="btn btn-small copy-modal-field" data-value="${escapeHtml(value)}" data-label="${escapeHtml(credentialLabels[key] || key)}">📋 Copiar</button>
+                  <button type="button" class="btn btn-small copy-modal-field" data-value="${escapeHtml(value)}" data-label="${escapeHtml(credentialLabels[key] || key)}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> Copiar</button>
                 </div>
               `).join('')}
               ${extras.map(([key, value]) => `
@@ -1045,7 +1152,7 @@ function openCredentialsModal(row) {
                     <span class="cred-label">${escapeHtml(key)}</span>
                     <code class="cred-value">${escapeHtml(value)}</code>
                   </div>
-                  <button type="button" class="btn btn-small copy-modal-field" data-value="${escapeHtml(value)}" data-label="${escapeHtml(key)}">📋 Copiar</button>
+                  <button type="button" class="btn btn-small copy-modal-field" data-value="${escapeHtml(value)}" data-label="${escapeHtml(key)}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> Copiar</button>
                 </div>
               `).join('')}
             </div>
@@ -1054,8 +1161,8 @@ function openCredentialsModal(row) {
           `}
           <div class="modal-actions" style="margin-top: 18px; justify-content: space-between; flex-wrap: wrap;">
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-              <button type="button" id="copyAllCredsBtn" class="btn btn-small">📋 Copiar todo</button>
-              <button type="button" id="sendWhatsappCredsBtn" class="btn btn-small">💬 Enviar WhatsApp</button>
+              <button type="button" id="copyAllCredsBtn" class="btn btn-small"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> Copiar todo</button>
+              <button type="button" id="sendWhatsappCredsBtn" class="btn btn-small"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg> Enviar WhatsApp</button>
             </div>
             <button type="button" id="closeCredsBtn" class="btn btn-small">Cerrar</button>
           </div>
@@ -1098,7 +1205,7 @@ function openRenewModal(row) {
       <section class="modal renew-modal" role="dialog" aria-modal="true">
         <div class="modal-head">
           <h3>Renovar suscripción</h3>
-          <button id="closeModal" class="btn btn-small btn-ghost">✕</button>
+          <button id="closeModal" class="btn btn-small btn-ghost"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
         </div>
         <div class="modal-body">
           <p class="renew-current">Vence el: ${formatDate(row.expiry_date)}</p>
@@ -1276,7 +1383,7 @@ async function openCatalogModal(forceReload = false) {
               <h3>Catálogo de productos</h3>
               <p class="modal-subtitle">Cargando productos...</p>
             </div>
-            <button id="closeCatalogModal" class="btn btn-small btn-ghost" type="button">✕</button>
+            <button id="closeCatalogModal" class="btn btn-small btn-ghost" type="button"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
           </div>
           <div class="modal-body">
             <div class="empty"><strong>Cargando...</strong>Por favor espera un momento.</div>
@@ -1331,7 +1438,7 @@ async function openCatalogModal(forceReload = false) {
               <h3>Catálogo de productos</h3>
               <p class="modal-subtitle">Error al cargar</p>
             </div>
-            <button id="closeCatalogModal" class="btn btn-small btn-ghost" type="button">✕</button>
+            <button id="closeCatalogModal" class="btn btn-small btn-ghost" type="button"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
           </div>
           <div class="modal-body">
             <div class="error-box">No se pudieron cargar los datos del catálogo. Intenta nuevamente.</div>
@@ -1364,12 +1471,12 @@ async function openCatalogModal(forceReload = false) {
   host.innerHTML = `
     <div class="modal-backdrop" id="catalogBackdrop" data-render-id="${currentToken}">
       <section class="modal catalog-modal" role="dialog" aria-modal="true">
-        <div class="modal-head">
-          <div>
-            <h3>Catálogo de productos</h3>
-            <p class="modal-subtitle">Administra los nombres, precios base y estados</p>
-          </div>
-          <button id="closeCatalogModal" class="btn btn-small btn-ghost" type="button">✕</button>
+<div class="modal-head">
+            <div>
+              <h3>Catálogo de productos</h3>
+              <p class="modal-subtitle">Administra los nombres, precios base y estados</p>
+            </div>
+            <button id="closeCatalogModal" class="btn btn-small btn-ghost" type="button"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
         </div>
         <div class="modal-body">
           <div class="catalog-top-bar">
@@ -1412,7 +1519,7 @@ async function openCatalogModal(forceReload = false) {
                         </span>
                       </td>
                       <td class="catalog-cell-actions" style="text-align: right;">
-                        <button type="button" class="btn btn-small btn-action-edit edit-product-btn" data-id="${p.id}" title="Editar producto">✏️ Editar</button>
+                        <button type="button" class="btn btn-small btn-action-edit edit-product-btn" data-id="${p.id}" title="Editar producto"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg> Editar</button>
                       </td>
                     </tr>
                   `).join('')}
@@ -1467,7 +1574,7 @@ function openProductFormModal(product = null) {
             <h3>${isEditing ? 'Editar producto' : 'Nuevo producto'}</h3>
             <p class="modal-subtitle">${isEditing ? escapeHtml(product.name) : 'Ingresa los datos del nuevo producto'}</p>
           </div>
-          <button id="closeProductFormModal" class="btn btn-small btn-ghost" type="button" title="Volver al catálogo">✕</button>
+          <button id="closeProductFormModal" class="btn btn-small btn-ghost" type="button" title="Volver al catálogo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
         </div>
         <form id="productForm" class="modal-body">
           <div class="form-grid">
@@ -1622,7 +1729,7 @@ async function openForm(row = null) {
       <section class="modal" role="dialog" aria-modal="true">
         <div class="modal-head">
           <h3>${editingId ? 'Editar suscripción' : 'Nueva suscripción'}</h3>
-          <button id="closeModal" class="btn btn-small btn-ghost">✕</button>
+          <button id="closeModal" class="btn btn-small btn-ghost"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
         </div>
         <form id="subscriptionForm" class="modal-body">
           <div class="form-grid">
