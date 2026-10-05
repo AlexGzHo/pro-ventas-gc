@@ -1,4 +1,5 @@
 import './styles.css'
+import { renderShellMarkup, initShell } from './shell.js'
 import { supabase, isConfigured } from './supabase.js'
 import { SERVICES, credentialLabels, OWNERS_BY_ID, FINANCIAL_HISTORY_START } from './constants.js'
 import {
@@ -370,74 +371,63 @@ async function handleUpdatePassword(event) {
 }
 
 function appShell() {
-  root.innerHTML = `
-    <div class="shell">
-      <header class="topbar">
-        ${brandHtml()}
-        <div class="topbar-actions">
-          <span class="user-email">${escapeHtml(ownerNameForSession(session))}</span>
-          <button id="catalogBtn" class="btn btn-ghost btn-small" type="button" title="Administrar catálogo de productos">Catálogo</button>
-          <button id="logoutBtn" class="btn btn-ghost btn-small">Salir</button>
-        </div>
-      </header>
-      <main class="main">
-        <section class="hero">
-          <div>
-            <h2>Suscripciones</h2>
-            <p>Registra, renueva, copia accesos y abre WhatsApp desde un solo lugar.</p>
-          </div>
-          <button id="newBtn" class="btn btn-primary">+ Nueva suscripción</button>
-        </section>
-        <section id="kpis" class="kpis"></section>
-        <section class="toolbar">
-          <div class="search-box">
-            <span class="search-icon" aria-hidden="true">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
-            </span>
-            <input id="searchInput" type="search" placeholder="Buscar cliente, celular, servicio, correo...">
-            <button id="searchClearBtn" class="search-clear hidden" type="button" title="Limpiar búsqueda" aria-label="Limpiar búsqueda"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
-          </div>
-          <div class="filter-controls">
-            <select id="serviceFilter" class="filter-select" title="Filtrar por servicio"></select>
-            <select id="statusFilter" class="filter-select" title="Filtrar por estado">
-              <option value="TODOS">Estado: Todos</option>
-              <option value="activo">Estado: Activos</option>
-              <option value="proximo">Estado: Próximos</option>
-              <option value="hoy">Estado: Vencen hoy</option>
-              <option value="vencido">Estado: Vencidos</option>
-              <option value="sin-fecha">Estado: Sin fecha</option>
-            </select>
-            <select id="ownerFilter" class="filter-select" title="Filtrar por propietario">
-              <option value="TODOS">Propietario: Todos</option>
-              <option value="Alex">Propietario: Alex</option>
-              <option value="Liz">Propietario: Liz</option>
-            </select>
-            <select id="totalViewFilter" class="filter-select" title="Moneda de los totales principales">
-              <option value="PEN">Totales: S/</option>
-              <option value="USDT">Totales: USDT</option>
-            </select>
-          </div>
-        </section>
-        <div id="quickViews" class="quick-views" role="group" aria-label="Vistas rápidas de vencimiento"></div>
-        <div id="usdtRateBox" class="toolbar rate-box hidden">
-          <label class="rate-label">TC S/ por 1 USDT
-            <input id="usdtRateInput" type="number" min="0" step="0.0001" placeholder="Ej. 3.75">
-          </label>
-        </div>
-        <div class="results-bar">
-          <div id="resultsLine" class="results-line"></div>
-          <div class="view-toggle" role="group" aria-label="Cambiar vista">
-            <button id="viewCardsBtn" type="button" class="view-btn ${currentView === 'cards' ? 'active' : ''}" title="Vista de tarjetas">⊞ Tarjetas</button>
-            <button id="viewSummaryBtn" type="button" class="view-btn ${currentView === 'summary' ? 'active' : ''}" title="Vista resumen">☰ Resumen</button>
-          </div>
-        </div>
-        <section id="cards" class="${currentView === 'cards' ? 'grid' : 'summary-view-wrapper'}"></section>
-      </main>
-      <div id="modalHost"></div>
-    </div>`
+  const contentHtml = `
+    <section class="hero">
+      <div>
+        <h2>Suscripciones</h2>
+        <p>Registra, renueva, copia accesos y abre WhatsApp desde un solo lugar.</p>
+      </div>
+      <button id="newBtn" class="btn btn-primary">+ Nueva suscripción</button>
+    </section>
+    <section id="kpis" class="kpis"></section>
+    <section class="toolbar">
+      <div class="search-box">
+        <span class="search-icon" aria-hidden="true">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+        </span>
+        <input id="searchInput" type="search" placeholder="Buscar cliente, celular, servicio, correo...">
+        <button id="searchClearBtn" class="search-clear hidden" type="button" title="Limpiar búsqueda" aria-label="Limpiar búsqueda"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+      </div>
+      <div class="filter-controls">
+        <select id="serviceFilter" class="filter-select" title="Filtrar por servicio"></select>
+        <select id="ownerFilter" class="filter-select" title="Filtrar por propietario">
+          <option value="TODOS">Propietario: Todos</option>
+          <option value="Alex">Propietario: Alex</option>
+          <option value="Liz">Propietario: Liz</option>
+        </select>
+        <select id="totalViewFilter" class="filter-select" title="Moneda de los totales principales">
+          <option value="PEN">Totales: S/</option>
+          <option value="USDT">Totales: USDT</option>
+        </select>
+      </div>
+    </section>
+    <div id="quickViews" class="quick-views" role="group" aria-label="Vistas rápidas de vencimiento"></div>
+    <div id="usdtRateBox" class="toolbar rate-box hidden">
+      <label class="rate-label">TC S/ por 1 USDT
+        <input id="usdtRateInput" type="number" min="0" step="0.0001" placeholder="Ej. 3.75">
+      </label>
+    </div>
+    <div class="results-bar">
+      <div id="resultsLine" class="results-line"></div>
+      <div class="view-toggle" role="group" aria-label="Cambiar vista">
+        <button id="viewCardsBtn" type="button" class="view-btn ${currentView === 'cards' ? 'active' : ''}" title="Vista de tarjetas">⊞ Tarjetas</button>
+        <button id="viewSummaryBtn" type="button" class="view-btn ${currentView === 'summary' ? 'active' : ''}" title="Vista resumen">☰ Resumen</button>
+      </div>
+    </div>
+    <section id="cards" class="${currentView === 'cards' ? 'grid' : 'summary-view-wrapper'}"></section>
+  `
 
-  document.querySelector('#logoutBtn').addEventListener('click', () => supabase.auth.signOut())
+  root.innerHTML = renderShellMarkup({
+    userName: ownerNameForSession(session),
+    contentHtml,
+  })
+
+  initShell({
+    onLogout: () => supabase.auth.signOut(),
+  })
+
   document.querySelector('#catalogBtn').addEventListener('click', () => openCatalogModal())
+
   document.querySelector('#newBtn').addEventListener('click', () => openForm())
   document.querySelector('#viewCardsBtn').addEventListener('click', () => {
     if (currentView === 'cards') return
@@ -476,13 +466,6 @@ function appShell() {
 
   document.querySelector('#serviceFilter').addEventListener('change', (e) => {
     filters.service = e.target.value
-    renderData()
-  })
-  document.querySelector('#statusFilter').addEventListener('change', (e) => {
-    filters.status = e.target.value
-    if (filters.status !== 'TODOS') {
-      filters.quickView = 'all'
-    }
     renderData()
   })
   document.querySelector('#ownerFilter').addEventListener('change', (e) => {
@@ -706,11 +689,6 @@ function renderQuickViews() {
       filters.quickView = targetView
       if (targetView !== 'all' && filters.status !== 'TODOS') {
         filters.status = 'TODOS'
-        const stFilter = document.querySelector('#statusFilter')
-        if (stFilter) {
-          stFilter.value = 'TODOS'
-          stFilter.classList.remove('filter-active')
-        }
       }
       renderData()
     })
@@ -809,11 +787,9 @@ function renderData() {
   updateViewButtons()
 
   const sFilter = document.querySelector('#serviceFilter')
-  const stFilter = document.querySelector('#statusFilter')
   const oFilter = document.querySelector('#ownerFilter')
   const tFilter = document.querySelector('#totalViewFilter')
   if (sFilter) sFilter.classList.toggle('filter-active', filters.service !== 'TODOS')
-  if (stFilter) stFilter.classList.toggle('filter-active', filters.status !== 'TODOS')
   if (oFilter) oFilter.classList.toggle('filter-active', filters.owner !== 'TODOS')
   if (tFilter) tFilter.classList.toggle('filter-active', totalView !== 'PEN')
 
