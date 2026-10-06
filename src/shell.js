@@ -6,6 +6,7 @@ const SIDEBAR_COLLAPSED_KEY = 'pv_sidebar_collapsed';
 // Iconos SVG en línea consistentes con el diseño y Lucide
 const SHELL_ICONS = {
   menu: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>`,
+  home: `<svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>`,
   subscriptions: `<svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M3 10h18"></path><path d="M8 14h.01"></path><path d="M12 14h.01"></path><path d="M16 14h.01"></path></svg>`,
   logout: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>`,
   close: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`,
@@ -17,11 +18,14 @@ const SHELL_ICONS = {
  * @param {Object} options
  * @param {string} options.userName - Nombre del usuario activo
  * @param {string} options.contentHtml - HTML del contenido principal
+ * @param {string} options.activeNav - Sección activa ('inicio' o 'subscriptions')
  * @returns {string} Markup HTML del shell completo
  */
-export function renderShellMarkup({ userName = '', contentHtml = '' }) {
+export function renderShellMarkup({ userName = '', contentHtml = '', activeNav = 'inicio' }) {
   const safeUser = userName || 'Usuario';
   const initial = safeUser.charAt(0).toUpperCase();
+  const isInicio = activeNav === 'inicio';
+  const isSubs = activeNav === 'subscriptions';
 
   return `
     <div class="app-layout">
@@ -48,7 +52,11 @@ export function renderShellMarkup({ userName = '', contentHtml = '' }) {
 
         <nav class="sidebar-nav" aria-label="Módulos">
           <div class="nav-section-label">Gestión</div>
-          <a href="#suscripciones" class="nav-item active" data-nav="subscriptions" data-tooltip="Suscripciones" aria-current="page">
+          <a href="#inicio" class="nav-item ${isInicio ? 'active' : ''}" data-nav="inicio" data-tooltip="Inicio" ${isInicio ? 'aria-current="page"' : ''}>
+            ${SHELL_ICONS.home}
+            <span class="nav-text">Inicio</span>
+          </a>
+          <a href="#suscripciones" class="nav-item ${isSubs ? 'active' : ''}" data-nav="subscriptions" data-tooltip="Suscripciones" ${isSubs ? 'aria-current="page"' : ''}>
             ${SHELL_ICONS.subscriptions}
             <span class="nav-text">Suscripciones</span>
           </a>
@@ -110,8 +118,9 @@ export function renderShellMarkup({ userName = '', contentHtml = '' }) {
  * - Drawer en móvil con backdrop, tecla Escape y bloqueo de scroll
  * @param {Object} callbacks
  * @param {Function} callbacks.onLogout - Callback al hacer click en Cerrar sesión
+ * @param {Function} callbacks.onNavigate - Callback al navegar entre secciones del sidebar (recibe navKey, e)
  */
-export function initShell({ onLogout } = {}) {
+export function initShell({ onLogout, onNavigate } = {}) {
   const sidebar = document.querySelector('#appSidebar');
   const toggleBtn = document.querySelector('#sidebarToggleBtn');
   const collapseBtn = document.querySelector('#sidebarCollapseBtn');
@@ -198,6 +207,19 @@ export function initShell({ onLogout } = {}) {
       }
     }
   };
+
+  // Click en enlaces de navegación del sidebar
+  sidebar.querySelectorAll('.sidebar-nav .nav-item').forEach((item) => {
+    item.addEventListener('click', (e) => {
+      const navKey = item.dataset.nav;
+      if (!isDesktop()) {
+        closeDrawer();
+      }
+      if (onNavigate) {
+        onNavigate(navKey, e);
+      }
+    });
+  });
 
   // Click en botón hamburguesa en topbar (móvil)
   if (toggleBtn) {

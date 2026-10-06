@@ -1,5 +1,6 @@
 import './styles.css'
 import { renderShellMarkup, initShell } from './shell.js'
+import { renderInicioHtml, bindInicioEvents } from './views/inicio.js'
 import { supabase, isConfigured } from './supabase.js'
 import { SERVICES, credentialLabels, OWNERS_BY_ID, FINANCIAL_HISTORY_START } from './constants.js'
 import {
@@ -70,6 +71,10 @@ let editingId = null
 let currentFormIdempotencyKey = null
 let filters = { search: '', service: 'TODOS', status: 'TODOS', owner: 'TODOS', quickView: 'all' }
 let loading = false
+// Sección activa: 'inicio' (dashboard) o 'subscriptions' (gestión de suscripciones)
+let currentSection = 'inicio'
+// Fila a resaltar brevemente al navegar desde Inicio
+let highlightRowId = null
 // Vista de suscripciones: 'cards' (predeterminado) o 'summary' (tabla compacta).
 let currentView = localStorage.getItem('pv_view_mode') || 'cards'
 // Vista de totales: 'PEN' (predeterminado) o 'USDT' (solo lectura, no altera registros).
@@ -371,7 +376,97 @@ async function handleUpdatePassword(event) {
 }
 
 function appShell() {
-  const contentHtml = `
+  const currentHash = window.location.hash.toLowerCase()
+  if (currentHash === '#suscripciones') {
+    currentSection = 'subscriptions'
+  } else if (currentHash === '#inicio') {
+    currentSection = 'inicio'
+  }
+
+  // Shell administrativo que aloja el contenido dinámico en #mainContent
+  root.innerHTML = renderShellMarkup({
+    userName: ownerNameForSession(session),
+    contentHtml: '<div id="sectionContainer"></div>',
+    activeNav: currentSection,
+  })
+
+  initShell({
+    onLogout: () => supabase.auth.signOut(),
+    onNavigate: (navKey) => {
+      navigateToSection(navKey === 'inicio' ? 'inicio' : 'subscriptions')
+    },
+  })
+
+  document.querySelector('#catalogBtn').addEventListener('click', () => openCatalogModal())
+
+  window.addEventListener('hashchange', () => {
+    const h = window.location.hash.toLowerCase()
+    if (h === '#suscripciones' && currentSection !== 'subscriptions') {
+      navigateToSection('subscriptions', false)
+    } else if (h === '#inicio' && currentSection !== 'inicio') {
+      navigateToSection('inicio', false)
+    }
+  })
+
+  renderCurrentSection()
+}
+
+function updateSidebarActiveNav() {
+  document.querySelectorAll('#appSidebar .nav-item').forEach((item) => {
+    const isTarget =
+      (currentSection === 'inicio' && item.dataset.nav === 'inicio') ||
+      (currentSection === 'subscriptions' && item.dataset.nav === 'subscriptions')
+    item.classList.toggle('active', isTarget)
+    if (isTarget) {
+      item.setAttribute('aria-current', 'page')
+    } else {
+      item.removeAttribute('aria-current')
+    }
+  })
+}
+
+function navigateToSection(sectionName, updateHash = true) {
+  if (currentSection === sectionName && !highlightRowId) return
+  currentSection = sectionName
+  if (updateHash) {
+    const targetHash = sectionName === 'inicio' ? '#inicio' : '#suscripciones'
+    if (window.location.hash !== targetHash) {
+      history.replaceState(null, '', targetHash)
+    }
+  }
+  updateSidebarActiveNav()
+  renderCurrentSection()
+}
+
+function renderCurrentSection() {
+  const container = document.querySelector('#sectionContainer') || document.querySelector('#mainContent')
+  if (!container) return
+
+  if (currentSection === 'inicio') {
+    renderInicioSection(container)
+  } else {
+    renderSubscriptionsSection(container)
+  }
+}
+
+function renderInicioSection(container) {
+  container.innerHTML = renderInicioHtml(rows)
+  bindInicioEvents(container, {
+    onNavigateToSubscription: (rowId) => {
+      highlightRowId = rowId
+      // Restablecer filtros para asegurar que el registro sea inmediatamente visible
+      filters.search = ''
+      filters.service = 'TODOS'
+      filters.status = 'TODOS'
+      filters.owner = 'TODOS'
+      filters.quickView = 'all'
+      navigateToSection('subscriptions')
+    },
+  })
+}
+
+function renderSubscriptionsSection(container) {
+  container.innerHTML = `
     <section class="hero">
       <div>
         <h2>Suscripciones</h2>
@@ -385,26 +480,26 @@ function appShell() {
         <span class="search-icon" aria-hidden="true">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
         </span>
-        <input id="searchInput" type="search" placeholder="Buscar cliente, celular, servicio, correo...">
-        <button id="searchClearBtn" class="search-clear hidden" type="button" title="Limpiar búsqueda" aria-label="Limpiar búsqueda"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+        <input id="searchInput" type="search" placeholder="Buscar cliente, celular, servicio, correo..." value="${escapeHtml(filters.search)}">
+        <button id="searchClearBtn" class="search-clear ${filters.search ? '' : 'hidden'}" type="button" title="Limpiar búsqueda" aria-label="Limpiar búsqueda"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
       </div>
       <div class="filter-controls">
         <select id="serviceFilter" class="filter-select" title="Filtrar por servicio"></select>
         <select id="ownerFilter" class="filter-select" title="Filtrar por propietario">
-          <option value="TODOS">Propietario: Todos</option>
-          <option value="Alex">Propietario: Alex</option>
-          <option value="Liz">Propietario: Liz</option>
+          <option value="TODOS" ${filters.owner === 'TODOS' ? 'selected' : ''}>Propietario: Todos</option>
+          <option value="Alex" ${filters.owner === 'Alex' ? 'selected' : ''}>Propietario: Alex</option>
+          <option value="Liz" ${filters.owner === 'Liz' ? 'selected' : ''}>Propietario: Liz</option>
         </select>
         <select id="totalViewFilter" class="filter-select" title="Moneda de los totales principales">
-          <option value="PEN">Totales: S/</option>
-          <option value="USDT">Totales: USDT</option>
+          <option value="PEN" ${totalView === 'PEN' ? 'selected' : ''}>Totales: S/</option>
+          <option value="USDT" ${totalView === 'USDT' ? 'selected' : ''}>Totales: USDT</option>
         </select>
       </div>
     </section>
     <div id="quickViews" class="quick-views" role="group" aria-label="Vistas rápidas de vencimiento"></div>
-    <div id="usdtRateBox" class="toolbar rate-box hidden">
+    <div id="usdtRateBox" class="toolbar rate-box ${totalView === 'USDT' ? '' : 'hidden'}">
       <label class="rate-label">TC S/ por 1 USDT
-        <input id="usdtRateInput" type="number" min="0" step="0.0001" placeholder="Ej. 3.75">
+        <input id="usdtRateInput" type="number" min="0" step="0.0001" placeholder="Ej. 3.75" value="${usdtViewRate ?? ''}">
       </label>
     </div>
     <div class="results-bar">
@@ -417,26 +512,20 @@ function appShell() {
     <section id="cards" class="${currentView === 'cards' ? 'grid' : 'summary-view-wrapper'}"></section>
   `
 
-  root.innerHTML = renderShellMarkup({
-    userName: ownerNameForSession(session),
-    contentHtml,
-  })
+  bindSubscriptionsSectionEvents()
+  renderData()
+}
 
-  initShell({
-    onLogout: () => supabase.auth.signOut(),
-  })
-
-  document.querySelector('#catalogBtn').addEventListener('click', () => openCatalogModal())
-
-  document.querySelector('#newBtn').addEventListener('click', () => openForm())
-  document.querySelector('#viewCardsBtn').addEventListener('click', () => {
+function bindSubscriptionsSectionEvents() {
+  document.querySelector('#newBtn')?.addEventListener('click', () => openForm())
+  document.querySelector('#viewCardsBtn')?.addEventListener('click', () => {
     if (currentView === 'cards') return
     currentView = 'cards'
     localStorage.setItem('pv_view_mode', 'cards')
     updateViewButtons()
     renderData()
   })
-  document.querySelector('#viewSummaryBtn').addEventListener('click', () => {
+  document.querySelector('#viewSummaryBtn')?.addEventListener('click', () => {
     if (currentView === 'summary') return
     currentView = 'summary'
     localStorage.setItem('pv_view_mode', 'summary')
@@ -446,34 +535,38 @@ function appShell() {
   const searchInput = document.querySelector('#searchInput')
   const searchClearBtn = document.querySelector('#searchClearBtn')
 
-  searchInput.addEventListener('input', (e) => {
-    filters.search = e.target.value
-    if (searchClearBtn) {
-      searchClearBtn.classList.toggle('hidden', !e.target.value.trim())
-    }
-    renderData()
-  })
-
-  if (searchClearBtn) {
-    searchClearBtn.addEventListener('click', () => {
-      searchInput.value = ''
-      filters.search = ''
-      searchClearBtn.classList.add('hidden')
-      searchInput.focus()
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      filters.search = e.target.value
+      if (searchClearBtn) {
+        searchClearBtn.classList.toggle('hidden', !e.target.value.trim())
+      }
       renderData()
     })
   }
 
-  document.querySelector('#serviceFilter').addEventListener('change', (e) => {
+  if (searchClearBtn) {
+    searchClearBtn.addEventListener('click', () => {
+      if (searchInput) {
+        searchInput.value = ''
+        filters.search = ''
+        searchClearBtn.classList.add('hidden')
+        searchInput.focus()
+        renderData()
+      }
+    })
+  }
+
+  document.querySelector('#serviceFilter')?.addEventListener('change', (e) => {
     filters.service = e.target.value
     renderData()
   })
-  document.querySelector('#ownerFilter').addEventListener('change', (e) => {
+  document.querySelector('#ownerFilter')?.addEventListener('change', (e) => {
     filters.owner = e.target.value
     renderData()
   })
   // Vista de totales: PEN (predeterminado) o USDT (solo presentación).
-  document.querySelector('#totalViewFilter').addEventListener('change', (e) => {
+  document.querySelector('#totalViewFilter')?.addEventListener('change', (e) => {
     totalView = e.target.value
     const rateBox = document.querySelector('#usdtRateBox')
     if (rateBox) {
@@ -488,7 +581,7 @@ function appShell() {
     }
     renderKpis()
   })
-  document.querySelector('#usdtRateInput').addEventListener('input', (e) => {
+  document.querySelector('#usdtRateInput')?.addEventListener('input', (e) => {
     usdtViewRate = e.target.value
     renderKpis()
   })
@@ -520,7 +613,11 @@ async function loadRows() {
     rows = data || []
     invalidateServiceCache()
     invalidateEmailDomainCache()
-    renderData()
+    if (currentSection === 'inicio') {
+      renderCurrentSection()
+    } else {
+      renderData()
+    }
   } finally {
     setLoading(false)
   }
@@ -827,6 +924,19 @@ function renderData() {
     cards.className = 'grid'
     cards.innerHTML = data.map(cardHtml).join('')
     bindCardEvents()
+  }
+
+  // Si se navegó hacia una suscripción específica desde Inicio, enfocarla suavemente
+  if (highlightRowId) {
+    const targetElement = cards.querySelector(`[data-id="${highlightRowId}"]`)
+    if (targetElement) {
+      targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      targetElement.classList.add('card-highlight-active')
+      setTimeout(() => {
+        targetElement.classList.remove('card-highlight-active')
+      }, 2500)
+    }
+    highlightRowId = null
   }
 }
 
