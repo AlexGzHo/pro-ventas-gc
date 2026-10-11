@@ -98,7 +98,8 @@ export function daysUntil(value) {
   return Math.round((target - today) / 86400000)
 }
 
-export function statusFor(value) {
+export function statusFor(value, archived_at = null) {
+  if (archived_at) return { key: 'archivado', label: 'Archivado', tone: 'neutral', days: null }
   const days = daysUntil(value)
   if (days === null) return { key: 'sin-fecha', label: 'Sin fecha', tone: 'neutral', days }
   if (days < 0) return { key: 'vencido', label: `Vencido hace ${Math.abs(days)} día${Math.abs(days) === 1 ? '' : 's'}`, tone: 'danger', days }

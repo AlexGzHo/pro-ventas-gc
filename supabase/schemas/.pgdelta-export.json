@@ -1,0 +1,41 @@
+{
+  "formatVersion": 1,
+  "redactSecrets": true,
+  "scope": "database",
+  "loadOrder": [
+    "public/schema.sql",
+    "public/adp_wipes.sql",
+    "_cluster/extensions/pgcrypto.sql",
+    "_cluster/extensions/uuid-ossp.sql",
+    "public/tables/clients.sql",
+    "public/tables/products.sql",
+    "public/tables/providers.sql",
+    "public/tables/subscriptions.sql",
+    "public/tables/subscription_renewals.sql",
+    "public/functions/create_subscription_v3.sql",
+    "public/functions/create_subscription.sql",
+    "public/functions/process_renewal.sql",
+    "public/functions/delete_subscription_transactional.sql",
+    "public/functions/set_updated_at.sql",
+    "public/default_privileges.sql"
+  ],
+  "profile": "supabase",
+  "defaultOwner": "postgres",
+  "files": [
+    "_cluster/extensions/pgcrypto.sql",
+    "_cluster/extensions/uuid-ossp.sql",
+    "public/adp_wipes.sql",
+    "public/default_privileges.sql",
+    "public/functions/create_subscription.sql",
+    "public/functions/create_subscription_v3.sql",
+    "public/functions/delete_subscription_transactional.sql",
+    "public/functions/process_renewal.sql",
+    "public/functions/set_updated_at.sql",
+    "public/schema.sql",
+    "public/tables/clients.sql",
+    "public/tables/products.sql",
+    "public/tables/providers.sql",
+    "public/tables/subscription_renewals.sql",
+    "public/tables/subscriptions.sql"
+  ]
+}

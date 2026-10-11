@@ -1,6 +1,10 @@
 import './styles.css'
 import { renderShellMarkup, initShell } from './shell.js'
-import { renderInicioHtml, bindInicioEvents } from './views/inicio.js'
+import { mountInicioView } from './views/inicio.js'
+import { mountClientesView } from './views/clientes.js'
+import { mountProductosView } from './views/productos.js'
+import { mountProveedoresView } from './views/proveedores.js'
+import { mountWhatsappTemplatesView } from './views/whatsappTemplates.js'
 import { supabase, isConfigured } from './supabase.js'
 import { SERVICES, credentialLabels, OWNERS_BY_ID, FINANCIAL_HISTORY_START } from './constants.js'
 import {
@@ -27,6 +31,7 @@ import {
   openWhatsApp,
   reminderText,
   updateText,
+  setTemplates,
 } from './whatsapp.js'
 
 const root = document.querySelector('#app')
@@ -65,6 +70,12 @@ let rows = []
 let products = []
 let productsLoaded = false
 let productsLoadingPromise = null
+let clients = []
+let clientsLoaded = false
+let clientsLoadingPromise = null
+let providers = []
+let providersLoaded = false
+let providersLoadingPromise = null
 let catalogAbortController = null
 let catalogRenderId = 0
 let editingId = null
@@ -405,6 +416,14 @@ function appShell() {
       navigateToSection('subscriptions', false)
     } else if (h === '#inicio' && currentSection !== 'inicio') {
       navigateToSection('inicio', false)
+    } else if (h === '#clientes' && currentSection !== 'clientes') {
+      navigateToSection('clientes', false)
+    } else if (h === '#productos' && currentSection !== 'productos') {
+      navigateToSection('productos', false)
+    } else if (h === '#proveedores' && currentSection !== 'proveedores') {
+      navigateToSection('proveedores', false)
+    } else if (h === '#whatsapp-templates' && currentSection !== 'whatsappTemplates') {
+      navigateToSection('whatsappTemplates', false)
     }
   })
 
@@ -413,9 +432,7 @@ function appShell() {
 
 function updateSidebarActiveNav() {
   document.querySelectorAll('#appSidebar .nav-item').forEach((item) => {
-    const isTarget =
-      (currentSection === 'inicio' && item.dataset.nav === 'inicio') ||
-      (currentSection === 'subscriptions' && item.dataset.nav === 'subscriptions')
+    const isTarget = item.dataset.nav === currentSection
     item.classList.toggle('active', isTarget)
     if (isTarget) {
       item.setAttribute('aria-current', 'page')
@@ -429,7 +446,12 @@ function navigateToSection(sectionName, updateHash = true) {
   if (currentSection === sectionName && !highlightRowId) return
   currentSection = sectionName
   if (updateHash) {
-    const targetHash = sectionName === 'inicio' ? '#inicio' : '#suscripciones'
+    let targetHash = '#inicio'
+    if (sectionName === 'subscriptions') targetHash = '#suscripciones'
+    else if (sectionName === 'clientes') targetHash = '#clientes'
+    else if (sectionName === 'productos') targetHash = '#productos'
+    else if (sectionName === 'proveedores') targetHash = '#proveedores'
+    else if (sectionName === 'whatsappTemplates') targetHash = '#whatsapp-templates'
     if (window.location.hash !== targetHash) {
       history.replaceState(null, '', targetHash)
     }
@@ -444,17 +466,33 @@ function renderCurrentSection() {
 
   if (currentSection === 'inicio') {
     renderInicioSection(container)
+  } else if (currentSection === 'clientes') {
+    mountClientesView(container, {
+      onNavigateToSubscription: (rowId) => {
+        highlightRowId = rowId
+        filters.search = ''
+        filters.service = 'TODOS'
+        filters.status = 'TODOS'
+        filters.owner = 'TODOS'
+        filters.quickView = 'all'
+        navigateToSection('subscriptions')
+      }
+    })
+  } else if (currentSection === 'productos') {
+    mountProductosView(container)
+  } else if (currentSection === 'proveedores') {
+    mountProveedoresView(container)
+  } else if (currentSection === 'whatsappTemplates') {
+    mountWhatsappTemplatesView(container)
   } else {
     renderSubscriptionsSection(container)
   }
 }
 
 function renderInicioSection(container) {
-  container.innerHTML = renderInicioHtml(rows)
-  bindInicioEvents(container, {
+  mountInicioView(container, rows, {
     onNavigateToSubscription: (rowId) => {
       highlightRowId = rowId
-      // Restablecer filtros para asegurar que el registro sea inmediatamente visible
       filters.search = ''
       filters.service = 'TODOS'
       filters.status = 'TODOS'
@@ -517,7 +555,7 @@ function renderSubscriptionsSection(container) {
 }
 
 function bindSubscriptionsSectionEvents() {
-  document.querySelector('#newBtn')?.addEventListener('click', () => openForm())
+  document.querySelector('#newBtn')?.addEventListener('click', () => window.openSubscriptionForm())
   document.querySelector('#viewCardsBtn')?.addEventListener('click', () => {
     if (currentView === 'cards') return
     currentView = 'cards'
@@ -599,21 +637,40 @@ function updateViewButtons() {
 async function loadRows() {
   setLoading(true, 'Cargando...')
   try {
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('subscriptions')
-      .select('*')
-      .is('archived_at', null)
+      .select('*, client:clients(*), product:products(*), provider_rel:providers(*)')
       .order('expiry_date', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: false })
+
+    // Fallback: If migration v3 isn't run, the above will fail.
+    if (error && error.code === 'PGRST200') {
+      const fallback = await supabase
+        .from('subscriptions')
+        .select('*')
+        .order('expiry_date', { ascending: true, nullsFirst: false })
+        .order('created_at', { ascending: false })
+      data = fallback.data
+      error = fallback.error
+    }
 
     if (error) {
       toast(`No se pudieron cargar los datos: ${error.message}`, 'error')
       return
     }
-    rows = data || []
+
+    // Map relations to flat properties to maintain compatibility with existing search/sort/UI logic
+    rows = (data || []).map(r => ({
+      ...r,
+      client_name: r.client?.name || r.client_name,
+      phone: r.client?.phone || r.phone,
+      service: r.product?.name || r.service,
+      provider: r.provider_rel?.name || r.provider
+    }))
+
     invalidateServiceCache()
     invalidateEmailDomainCache()
-    if (currentSection === 'inicio') {
+    if (currentSection === 'inicio' || currentSection === 'clientes' || currentSection === 'productos' || currentSection === 'proveedores') {
       renderCurrentSection()
     } else {
       renderData()
@@ -699,6 +756,9 @@ function renderFilters() {
 }
 
 function matchesQuickView(row, view) {
+  if (view === 'archived') return !!row.archived_at
+  if (row.archived_at) return false // Don't show archived items in other views
+
   const days = daysUntil(row.expiry_date)
   if (view === 'today') {
     return days === 0
@@ -733,19 +793,25 @@ function quickViewCounts() {
   let today = 0
   let next7 = 0
   let expired = 0
+  let archived = 0
 
   baseRows.forEach((row) => {
-    const days = daysUntil(row.expiry_date)
-    if (days === 0) today++
-    if (days !== null && days > 0 && days <= 7) next7++
-    if (days !== null && days < 0) expired++
+    if (row.archived_at) {
+      archived++
+    } else {
+      const days = daysUntil(row.expiry_date)
+      if (days === 0) today++
+      if (days !== null && days > 0 && days <= 7) next7++
+      if (days !== null && days < 0) expired++
+    }
   })
 
   return {
-    all: baseRows.length,
+    all: baseRows.filter(r => !r.archived_at).length,
     today,
     next7,
     expired,
+    archived
   }
 }
 
@@ -761,6 +827,7 @@ function renderQuickViews() {
     { key: 'today', label: 'Vencen hoy', count: counts.today, tone: counts.today > 0 ? 'warning' : '' },
     { key: 'next7', label: 'Próximos 7 días', count: counts.next7 },
     { key: 'expired', label: 'Vencidas', count: counts.expired, tone: counts.expired > 0 ? 'danger' : '' },
+    { key: 'archived', label: 'Archivadas', count: counts.archived, tone: counts.archived > 0 ? 'neutral' : '' },
   ]
 
   container.innerHTML = views
@@ -795,7 +862,7 @@ function renderQuickViews() {
 function filteredRows() {
   const q = filters.search.trim().toLowerCase()
   return rows.filter((row) => {
-    const status = statusFor(row.expiry_date)
+    const status = statusFor(row.expiry_date, row.archived_at)
     const haystack = [
       row.client_name,
       row.phone,
@@ -817,10 +884,10 @@ function filteredRows() {
 
 async function renderKpis() {
   const activeCount = filteredRows().filter(
-    (r) => statusFor(r.expiry_date) === 'activo' || statusFor(r.expiry_date) === 'hoy'
+    (r) => { const k = statusFor(r.expiry_date, r.archived_at).key; return k === 'activo' || k === 'hoy'; }
   ).length
-  const soonCount = filteredRows().filter((r) => statusFor(r.expiry_date) === 'proximo').length
-  const expiredCount = filteredRows().filter((r) => statusFor(r.expiry_date) === 'vencido').length
+  const soonCount = filteredRows().filter((r) => statusFor(r.expiry_date, r.archived_at).key === 'proximo').length
+  const expiredCount = filteredRows().filter((r) => statusFor(r.expiry_date, r.archived_at).key === 'vencido').length
 
   document.querySelector('#kpi-active').innerHTML = kpi('Activas', activeCount)
   document.querySelector('#kpi-soon').innerHTML = kpi('Vencen pronto', soonCount)
@@ -868,8 +935,8 @@ async function renderKpis() {
     document.querySelector('#kpi-cost').innerHTML = kpi('Costos del mes', '<small>Sin datos históricos</small>')
     document.querySelector('#kpi-operations').innerHTML = kpi('Operaciones', '<small>-</small>')
   } else {
-    document.querySelector('#kpi-income').innerHTML = kpi('Ingresos del mes', `S/ ${formatMoney(income)}`)
-    document.querySelector('#kpi-cost').innerHTML = kpi('Costos del mes', `S/ ${formatMoney(cost)}`)
+    document.querySelector('#kpi-income').innerHTML = kpi('Ingresos del mes', formatMoney(income))
+    document.querySelector('#kpi-cost').innerHTML = kpi('Costos del mes', formatMoney(cost))
     document.querySelector('#kpi-operations').innerHTML = kpi('Operaciones', counts)
   }
 }
@@ -940,8 +1007,25 @@ function renderData() {
   }
 }
 
+function formatExpiryBadge(status) {
+  if (status.days === null) {
+    return { icon: '', text: status.label }
+  }
+  if (status.days < 0) {
+    const d = Math.abs(status.days)
+    return { icon: '⚠️', text: `Vencido (${d}d)` }
+  }
+  if (status.days === 0) {
+    return { icon: '⚠️', text: 'Vence hoy' }
+  }
+  if (status.days === 1) {
+    return { icon: '⚠️', text: 'Vence mañana' }
+  }
+  return { icon: '🕒', text: `En ${status.days} días` }
+}
+
 function cardHtml(row) {
-  const status = statusFor(row.expiry_date)
+  const status = statusFor(row.expiry_date, row.archived_at)
   const owner = ownerNameForRow(row)
   const ownerKey = owner.toLowerCase()
 
@@ -949,59 +1033,109 @@ function cardHtml(row) {
   const costPEN = amountInPEN(row.cost, rowCostCurrency(row), row.cost_exchange_rate)
   const profitPEN = salePEN - costPEN
 
+  const serviceName = row.service || row.product?.name || 'SIN SERVICIO'
+  const initials = serviceName.trim().substring(0, 2).toUpperCase()
+  const logoUrl = row.product?.logo_url
+  const categoryTag = row.product?.category || (serviceName.toLowerCase().includes('gpt') ? 'IA y Productividad' : 'Entretenimiento')
+  const badge = formatExpiryBadge(status)
+
+  const saleDisplay = formatAmount(row.sale_price, row.sale_price_currency)
+  const costDisplay = formatAmount(row.cost, row.cost_currency)
+
+  let logoHtml = ''
+  if (logoUrl) {
+    logoHtml = `
+      <div class="card-product-logo-wrap">
+        <img src="${escapeHtml(logoUrl)}" alt="${escapeHtml(serviceName)}" class="card-product-logo" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='flex';" />
+        <div class="card-product-logo-fallback" style="display:none;">${escapeHtml(initials)}</div>
+      </div>
+    `
+  } else {
+    logoHtml = `
+      <div class="card-product-logo-wrap">
+        <div class="card-product-logo-fallback">${escapeHtml(initials)}</div>
+      </div>
+    `
+  }
+
   return `
-    <article class="card" data-id="${row.id}">
+    <article class="card card-status-${status.tone}" data-id="${row.id}">
       <div class="card-head">
-        <div class="card-head-info">
-          <div class="service-pill"><span class="service-dot"></span>${escapeHtml(row.service || 'SIN SERVICIO')}</div>
-          <h3 class="client">${escapeHtml(row.client_name || 'Sin nombre')}</h3>
-          <div class="phone"><span class="phone-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg></span> ${escapeHtml(row.phone || 'Sin celular')}</div>
+        <div class="card-product-group">
+          ${logoHtml}
+          <div class="card-product-meta">
+            <h3 class="card-product-title">${escapeHtml(serviceName)}</h3>
+            <span class="card-product-tag">${escapeHtml(categoryTag)}</span>
+          </div>
         </div>
         <div class="card-badge-wrap">
-          <span class="badge badge-${status.tone}">${escapeHtml(status.label)}</span>
+          <span class="badge badge-${status.tone}">
+            ${badge.icon ? `<span class="badge-icon">${badge.icon}</span> ` : ''}${escapeHtml(badge.text)}
+          </span>
         </div>
       </div>
 
-      <div class="financial-grid">
-        <div class="meta-box">
-          <span>Venta (${currencyLabel(row.sale_price_currency)})</span>
-          <strong class="meta-price-sale">${formatAmount(row.sale_price, row.sale_price_currency)}</strong>
-          ${isUSDT(row.sale_price_currency) ? `<small class="ex-rate">TC ${formatMoney(row.sale_price_exchange_rate)}</small>` : ''}
+      <div class="card-body-row">
+        <div class="card-client-col">
+          <div class="card-client-row card-client-name" title="${escapeHtml(row.client_name || 'Sin cliente')}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="client-svg-icon"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(row.client_name || 'Sin nombre')}</span>
+          </div>
+          <div class="card-client-row card-client-phone">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="phone-svg-icon"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+            <span>${escapeHtml(row.phone || 'Sin celular')}</span>
+          </div>
         </div>
-        <div class="meta-box">
-          <span>Costo (${currencyLabel(row.cost_currency)})</span>
-          <strong class="meta-price-cost">${formatAmount(row.cost, row.cost_currency)}</strong>
-          ${isUSDT(row.cost_currency) ? `<small class="ex-rate">TC ${formatMoney(row.cost_exchange_rate)}</small>` : ''}
-        </div>
-        <div class="meta-box">
-          <span>Ganancia</span>
-          <strong class="meta-price-profit ${profitPEN >= 0 ? 'profit-positive' : 'profit-negative'}">${formatMoney(profitPEN)}</strong>
+
+        <div class="card-profit-col">
+          <span class="card-profit-label">Ganancia</span>
+          <strong class="card-profit-val ${profitPEN >= 0 ? 'profit-positive' : 'profit-negative'}">${formatMoney(profitPEN)}</strong>
+          <span class="card-sub-financials">Venta ${saleDisplay} · Costo ${costDisplay}</span>
         </div>
       </div>
 
-      <div class="meta-details-grid">
-<div class="meta-box">
-            <span>Vencimiento</span>
-            <strong><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> ${formatDate(row.expiry_date)}</strong>
+      <div class="card-footer-meta">
+        <div class="card-footer-item">
+          <span class="card-footer-label">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            Vencimiento
+          </span>
+          <strong class="card-footer-val">${formatDate(row.expiry_date)}</strong>
         </div>
-        <div class="meta-box">
-          <span>Proveedor</span>
-          <strong>${escapeHtml(row.provider || '—')}</strong>
+
+        <div class="card-footer-item">
+          <span class="card-footer-label">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+            Proveedor
+          </span>
+          <strong class="card-footer-val" title="${escapeHtml(row.provider || '—')}">${escapeHtml(row.provider || '—')}</strong>
         </div>
-        <div class="meta-box meta-box-owner">
-          <span>Propietario</span>
-          <div class="meta-owner-value">
+
+        <div class="card-footer-item">
+          <span class="card-footer-label">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            Propietario
+          </span>
+          <div class="card-footer-val meta-owner-value">
             <span class="owner-dot owner-dot-${escapeHtml(ownerKey)}"></span>
-            <strong>${escapeHtml(owner)}</strong>
+            <span>${escapeHtml(owner)}</span>
           </div>
         </div>
       </div>
 
       <div class="card-actions">
         <div class="card-actions-primary">
-          <button type="button" class="btn btn-small renew btn-action-renovar" title="Extender período"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> Renovar</button>
-          <button type="button" class="btn btn-small whatsapp-reminder btn-action-cobrar" title="Enviar recordatorio / cobro por WhatsApp"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg> Cobrar</button>
-          <button type="button" class="btn btn-small copy-all btn-action-copy" title="Copiar todos los accesos"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> Copiar</button>
+          <button type="button" class="btn btn-small renew btn-action-renovar" title="Extender período">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            Renovar
+          </button>
+          <button type="button" class="btn btn-small whatsapp-reminder btn-action-cobrar" title="Enviar recordatorio / cobro por WhatsApp">
+            <span class="cobrar-icon">$</span>
+            Cobrar
+          </button>
+          <button type="button" class="btn btn-small copy-all btn-action-copy" title="Copiar todos los accesos">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+          </button>
         </div>
         <div class="card-menu-wrap">
           <button type="button" class="btn btn-small btn-ghost card-menu-btn" title="Más acciones" aria-haspopup="true" aria-expanded="false">•••</button>
@@ -1016,8 +1150,11 @@ function cardHtml(row) {
             <button type="button" class="card-dropdown-item edit" role="menuitem">
               <span class="dropdown-item-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></span> Editar suscripción
             </button>
-            <button type="button" class="card-dropdown-item delete card-dropdown-danger" role="menuitem">
-              <span class="dropdown-item-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></span> Dar de baja
+            <button type="button" class="card-dropdown-item ${row.archived_at ? 'unarchive' : 'archive'} card-dropdown-danger" role="menuitem">
+              <span class="dropdown-item-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></span> ${row.archived_at ? 'Recuperar' : 'Dar de baja'}
+            </button>
+            <button type="button" class="card-dropdown-item delete-hard card-dropdown-danger" role="menuitem" style="color: var(--status-danger-text);">
+              <span class="dropdown-item-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg></span> Eliminar definitivamente
             </button>
           </div>
         </div>
@@ -1053,8 +1190,10 @@ function bindCardEvents() {
     card.querySelector('.whatsapp-update')?.addEventListener('click', () => safeWhatsapp(row, updateText(row)))
     card.querySelector('.whatsapp-data')?.addEventListener('click', () => safeWhatsapp(row, credentialsText(row)))
     card.querySelector('.renew')?.addEventListener('click', () => openRenewModal(row))
-    card.querySelector('.edit')?.addEventListener('click', () => openForm(row))
-    card.querySelector('.delete')?.addEventListener('click', () => deleteRow(row))
+    card.querySelector('.edit')?.addEventListener('click', () => window.openSubscriptionForm(row))
+    card.querySelector('.archive')?.addEventListener('click', () => archiveRow(row))
+    card.querySelector('.unarchive')?.addEventListener('click', () => unarchiveRow(row))
+    card.querySelector('.delete-hard')?.addEventListener('click', () => deleteRow(row))
 
     const menuBtn = card.querySelector('.card-menu-btn')
     const dropdown = card.querySelector('.card-dropdown')
@@ -1115,7 +1254,7 @@ function summaryTableHtml(data) {
 }
 
 function summaryRowHtml(row) {
-  const status = statusFor(row.expiry_date)
+  const status = statusFor(row.expiry_date, row.archived_at)
   const owner = ownerNameForRow(row)
   const email = row.username_email ? escapeHtml(row.username_email) : ''
 
@@ -1124,7 +1263,10 @@ function summaryRowHtml(row) {
       <td>
         <div class="summary-client-cell">
           <strong class="summary-client-name">${escapeHtml(row.client_name || 'Sin nombre')}</strong>
-          <span class="summary-service-tag">${escapeHtml(row.service || 'SIN SERVICIO')}</span>
+          <span class="summary-service-tag" style="display:inline-flex; align-items:center; gap:5px;">
+            ${row.product?.logo_url ? `<img src="${escapeHtml(row.product.logo_url)}" alt="logo" style="width:14px; height:14px; border-radius:2px;">` : ''}
+            ${escapeHtml(row.service || 'SIN SERVICIO')}
+          </span>
           ${row.phone ? `<span class="summary-phone">${escapeHtml(row.phone)}</span>` : ''}
         </div>
       </td>
@@ -1286,59 +1428,200 @@ let currentRenewIdempotencyKey = null;
 function openRenewModal(row) {
   currentRenewIdempotencyKey = crypto.randomUUID();
   const host = document.querySelector('#modalHost')
+
+  // Calculate auto date
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const exp = new Date(row.expiry_date + 'T00:00:00');
+  const autoDateObj = exp < today ? today : exp;
+  const autoDateStr = `${autoDateObj.getFullYear()}-${String(autoDateObj.getMonth()+1).padStart(2,'0')}-${String(autoDateObj.getDate()).padStart(2,'0')}`;
+
   host.innerHTML = `
     <div class="modal-backdrop" id="backdrop">
-      <section class="modal renew-modal" role="dialog" aria-modal="true">
+      <section class="modal renew-modal" role="dialog" aria-modal="true" style="max-width: 450px;">
         <div class="modal-head">
           <h3>Renovar suscripción</h3>
           <button id="closeModal" class="btn btn-small btn-ghost"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
         </div>
         <div class="modal-body">
-          <p class="renew-current">Vence el: ${formatDate(row.expiry_date)}</p>
-          <div class="renew-grid">
-            <button type="button" class="btn btn-primary renew-option" data-period="7 days">+ 7 días</button>
-            <button type="button" class="btn btn-primary renew-option" data-period="15 days">+ 15 días</button>
-            <button type="button" class="btn btn-primary renew-option" data-period="1 month">+ 1 mes</button>
-            <button type="button" class="btn btn-primary renew-option" data-period="3 months">+ 3 meses</button>
-            <button type="button" class="btn btn-primary renew-option" data-period="6 months">+ 6 meses</button>
-            <button type="button" class="btn btn-primary renew-option" data-period="12 months">+ 12 meses</button>
+          <p class="renew-current" style="margin-bottom:1.5rem; font-size: 0.95rem; color: var(--text-muted);">Vencimiento actual: <strong style="color: var(--text-color);">${formatDate(row.expiry_date)}</strong></p>
+
+          <div class="form-group" style="margin-bottom:1.5rem;">
+            <label class="form-label">Fecha de inicio del nuevo período</label>
+            <div class="radio-group" style="display: flex; gap: 1rem; margin-bottom: 0.75rem;">
+              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                <input type="radio" name="renew_mode" value="auto" checked> Automática
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                <input type="radio" name="renew_mode" value="manual"> Elegir fecha
+              </label>
+            </div>
+            <input type="date" id="renewCustomDate" class="form-control" style="display: none;" value="${autoDateStr}">
+            <small id="renewAutoText" style="color: var(--text-muted); display: block; margin-top: 0.25rem;">Iniciará el ${formatDate(autoDateStr)}</small>
+          </div>
+
+          <div class="form-group" style="margin-bottom:1.5rem;">
+            <label class="form-label">Duración</label>
+            <div class="renew-grid">
+              <button type="button" class="btn btn-outline renew-option" data-period="7 days">+ 7 días</button>
+              <button type="button" class="btn btn-outline renew-option" data-period="15 days">+ 15 días</button>
+              <button type="button" class="btn btn-outline renew-option" data-period="1 month">+ 1 mes</button>
+              <button type="button" class="btn btn-outline renew-option" data-period="3 months">+ 3 meses</button>
+              <button type="button" class="btn btn-outline renew-option" data-period="6 months">+ 6 meses</button>
+              <button type="button" class="btn btn-outline renew-option" data-period="12 months">+ 12 meses</button>
+            </div>
+          </div>
+
+          <div id="renewPreview" class="renew-preview" style="display: none; background: rgba(0,0,0,0.15); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); margin-bottom: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+              <span style="color: var(--text-muted);">Inicio:</span>
+              <strong id="previewStart"></strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+              <span style="color: var(--text-muted);">Duración:</span>
+              <strong id="previewDuration"></strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-top: 1px solid var(--border-color); padding-top: 0.5rem; margin-top: 0.5rem;">
+              <span style="color: var(--text-muted);">Nuevo vencimiento:</span>
+              <strong id="previewEnd" style="color: var(--success-color);"></strong>
+            </div>
+          </div>
+
+          <div class="form-actions" style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+            <button type="button" id="cancelRenewBtn" class="btn btn-outline">Cancelar</button>
+            <button type="button" id="confirmRenewBtn" class="btn btn-primary" disabled>Confirmar renovación</button>
           </div>
         </div>
       </section>
     </div>
   `
 
+  const backdrop = host.querySelector('#backdrop');
+  const closeBtn = host.querySelector('#closeModal');
+  const cancelBtn = host.querySelector('#cancelRenewBtn');
+  const confirmBtn = host.querySelector('#confirmRenewBtn');
+  const radios = host.querySelectorAll('input[name="renew_mode"]');
+  const customDateInput = host.querySelector('#renewCustomDate');
+  const autoText = host.querySelector('#renewAutoText');
+  const optionBtns = host.querySelectorAll('.renew-option');
+  const previewBox = host.querySelector('#renewPreview');
+
+  let selectedMode = 'auto';
+  let selectedPeriod = null;
+  let selectedPeriodLabel = '';
+
   const close = () => {
     host.innerHTML = '';
     currentRenewIdempotencyKey = null;
+  };
+
+  backdrop.addEventListener('click', (e) => {
+    if (e.target === backdrop) close();
+  });
+  closeBtn.addEventListener('click', close);
+  cancelBtn.addEventListener('click', close);
+
+  function addPeriodToDate(dateStr, period) {
+    const d = new Date(dateStr + 'T00:00:00');
+    const [val, unit] = period.split(' ');
+    const num = parseInt(val);
+
+    if (unit.startsWith('day')) {
+      d.setDate(d.getDate() + num);
+    } else if (unit.startsWith('month')) {
+      const targetMonth = d.getMonth() + num;
+      const expectedMonth = targetMonth % 12;
+      d.setMonth(targetMonth);
+      if (d.getMonth() !== expectedMonth) {
+        d.setDate(0);
+      }
+    }
+
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
   }
 
-  document.getElementById('closeModal')?.addEventListener('click', close)
-  document.getElementById('backdrop')?.addEventListener('click', (e) => {
-    if (e.target.id === 'backdrop') close()
-  })
+  function updatePreview() {
+    if (!selectedPeriod) {
+      previewBox.style.display = 'none';
+      confirmBtn.disabled = true;
+      return;
+    }
 
-  host.querySelectorAll('.renew-option').forEach((btn) => {
+    if (selectedMode === 'manual' && !customDateInput.value) {
+      previewBox.style.display = 'none';
+      confirmBtn.disabled = true;
+      return;
+    }
+
+    const startStr = selectedMode === 'manual' ? customDateInput.value : autoDateStr;
+    const endStr = addPeriodToDate(startStr, selectedPeriod);
+
+    host.querySelector('#previewStart').textContent = formatDate(startStr);
+    host.querySelector('#previewDuration').textContent = selectedPeriodLabel;
+    host.querySelector('#previewEnd').textContent = formatDate(endStr);
+
+    previewBox.style.display = 'block';
+    confirmBtn.disabled = false;
+  }
+
+  radios.forEach(r => {
+    r.addEventListener('change', (e) => {
+      selectedMode = e.target.value;
+      if (selectedMode === 'auto') {
+        customDateInput.style.display = 'none';
+        autoText.style.display = 'block';
+      } else {
+        customDateInput.style.display = 'block';
+        autoText.style.display = 'none';
+      }
+      updatePreview();
+    });
+  });
+
+  customDateInput.addEventListener('input', updatePreview);
+  customDateInput.addEventListener('change', updatePreview);
+
+  optionBtns.forEach(btn => {
     btn.addEventListener('click', (e) => {
-      renewRow(row, btn.dataset.period)
-    })
-  })
+      optionBtns.forEach(b => {
+        b.classList.remove('btn-primary');
+        b.classList.add('btn-outline');
+      });
+      btn.classList.remove('btn-outline');
+      btn.classList.add('btn-primary');
+
+      selectedPeriod = btn.dataset.period;
+      selectedPeriodLabel = btn.textContent.replace('+ ', '');
+      updatePreview();
+    });
+  });
+
+  confirmBtn.addEventListener('click', () => {
+    if (!selectedPeriod) return;
+    if (selectedMode === 'manual' && !customDateInput.value) return;
+    const finalStartDate = selectedMode === 'manual' ? customDateInput.value : null;
+    renewRow(row, selectedPeriod, finalStartDate, confirmBtn);
+  });
 }
 
 window.renewRow = renewRow;
 
-async function renewRow(rowOrId, period) {
+async function renewRow(rowOrId, period, customStartDate = null, btnRef = null) {
   const rowId = typeof rowOrId === 'object' ? rowOrId.id : rowOrId;
   const row = typeof rowOrId === 'object' ? rowOrId : rows.find(r => r.id === rowId);
 
-  if (!confirm(`¿Renovar ${row.client_name} por ${period}?`)) return
+  // Si no viene del botón del modal, solicitar confirmación nativa
+  if (!btnRef && !confirm(`¿Renovar ${row.client_name} por ${period}?`)) return
 
-  const btn = event?.currentTarget || document.activeElement
-  const originalText = btn.innerHTML
+  const btn = btnRef || event?.currentTarget || document.activeElement
+  const originalText = btn ? btn.innerHTML : ''
 
   if (btn && btn.tagName === 'BUTTON') {
     btn.disabled = true
-    btn.innerHTML = '<span class="spinner"></span>'
+    btn.innerHTML = '<span class="spinner"></span> Procesando...'
   }
 
   setLoading(true, 'Procesando renovación...')
@@ -1354,12 +1637,17 @@ async function renewRow(rowOrId, period) {
     else if (period === '12 months') { period_value = 12; period_unit = 'month' }
     else throw new Error("Período no soportado por PRO VENTAS GC v2")
 
-    const { data, error } = await supabase.rpc('process_renewal', {
+    const payload = {
       p_subscription_id: rowId,
       p_period_value: period_value,
       p_period_unit: period_unit,
       p_idempotency_key: currentRenewIdempotencyKey
-    })
+    };
+    if (customStartDate) {
+      payload.p_start_date = customStartDate;
+    }
+
+    const { data, error } = await supabase.rpc('process_renewal', payload)
 
     if (error) throw error
 
@@ -1379,7 +1667,7 @@ async function renewRow(rowOrId, period) {
     setLoading(false)
   }
 }
-async function deleteRow(row) {
+async function archiveRow(row) {
   if (!confirm(`¿Archivar (dar de baja) a ${row.client_name}?`)) return
 
   setLoading(true, 'Archivando...')
@@ -1397,6 +1685,67 @@ async function deleteRow(row) {
     alert('Error al archivar: ' + err.message)
   } finally {
     setLoading(false)
+  }
+}
+
+async function unarchiveRow(row) {
+  if (!confirm(`¿Recuperar (dar de alta) a ${row.client_name}?`)) return
+
+  setLoading(true, 'Recuperando...')
+  try {
+    const { error } = await supabase
+      .from('subscriptions')
+      .update({ archived_at: null })
+      .eq('id', row.id)
+
+    if (error) throw error
+    toast('Suscripción recuperada')
+    await loadRows()
+  } catch (err) {
+    console.error(err)
+    alert('Error al recuperar: ' + err.message)
+  } finally {
+    setLoading(false)
+  }
+}
+
+async function deleteRow(row) {
+  setLoading(true, 'Consultando historial...');
+  let renewalsCount = 0;
+  try {
+    const { count } = await supabase
+      .from('subscription_renewals')
+      .select('*', { count: 'exact', head: true })
+      .eq('subscription_id', row.id);
+    renewalsCount = count || 0;
+  } catch (e) {
+    console.error('Error al contar renovaciones:', e);
+  }
+  setLoading(false);
+
+  const msg = renewalsCount > 0
+    ? `¿Eliminar DEFINITIVAMENTE a ${row.client_name} (${row.service})?\n\nSe borrarán también sus ${renewalsCount} registros financieros asociados.\nEsta acción es irreversible.`
+    : `¿Eliminar DEFINITIVAMENTE a ${row.client_name} (${row.service})?\n\nEsta acción no se puede deshacer.`;
+
+  if (!confirm(msg)) return;
+
+  setLoading(true, 'Eliminando...');
+  try {
+    const { error } = await supabase.rpc('delete_subscription_transactional', {
+      p_sub_id: row.id
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    toast('Suscripción eliminada definitivamente');
+    await loadRows();
+  } catch (err) {
+    console.error(err);
+    alert('Error al eliminar: ' + err.message);
+  } finally {
+    setLoading(false);
   }
 }
 
@@ -1446,6 +1795,43 @@ async function loadProducts(force = false) {
   return productsLoadingPromise
 }
 
+async function loadClients(force = false) {
+  if (clientsLoaded && !force) return { data: clients, error: null }
+  if (clientsLoadingPromise && !force) return clientsLoadingPromise
+  clientsLoadingPromise = (async () => {
+    try {
+      const { data, error } = await supabase.from('clients').select('*').order('name', { ascending: true })
+      if (error) return { data: null, error }
+      clients = data || []
+      clientsLoaded = true
+      return { data: clients, error: null }
+    } catch (err) {
+      return { data: null, error: err }
+    } finally {
+      clientsLoadingPromise = null
+    }
+  })()
+  return clientsLoadingPromise
+}
+
+async function loadProviders(force = false) {
+  if (providersLoaded && !force) return { data: providers, error: null }
+  if (providersLoadingPromise && !force) return providersLoadingPromise
+  providersLoadingPromise = (async () => {
+    try {
+      const { data, error } = await supabase.from('providers').select('*').order('name', { ascending: true })
+      if (error) return { data: null, error }
+      providers = data || []
+      providersLoaded = true
+      return { data: providers, error: null }
+    } catch (err) {
+      return { data: null, error: err }
+    } finally {
+      providersLoadingPromise = null
+    }
+  })()
+  return providersLoadingPromise
+}
 async function openCatalogModal(forceReload = false) {
   const host = document.querySelector('#modalHost')
   if (!host) return
@@ -1744,8 +2130,8 @@ function openProductFormModal(product = null) {
       return
     }
 
-    if (!rawPrice || isNaN(salePrice) || salePrice <= 0) {
-      setFormError('El precio de venta debe ser un número mayor a 0.')
+    if (!rawPrice || isNaN(salePrice) || salePrice < 0) {
+      setFormError('El precio de venta debe ser un número mayor o igual a 0.')
       return
     }
 
@@ -1793,9 +2179,9 @@ function openProductFormModal(product = null) {
   })
 }
 
-async function openForm(row = null) {
+window.openSubscriptionForm = async function(row = null) {
   try {
-    await loadProducts()
+    await Promise.all([loadProducts(), loadClients(), loadProviders()])
   } catch (err) {
     // Si la carga falla, el formulario continúa utilizable sin bloquearse
   }
@@ -1820,15 +2206,48 @@ async function openForm(row = null) {
         <form id="subscriptionForm" class="modal-body">
           <div class="form-grid">
             <div class="section-title">Cliente y servicio</div>
-            <label>Cliente
-              <input name="client_name" required value="${escapeHtml(row?.client_name || '')}" placeholder="Nombre del cliente">
-            </label>
-            <label>Celular
-              <input name="phone" inputmode="numeric" value="${escapeHtml(row?.phone || '')}" placeholder="987654321">
-            </label>
+            <div class="span-2" style="display:flex; flex-direction:column; gap:8px;">
+              <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+                <label style="flex:1; margin:0;">Cliente existente *
+                  <div style="display:flex; gap:6px; margin-top:4px;">
+                    <input type="text" id="clientSearchInput" placeholder="🔍 Buscar por nombre o teléfono..." style="flex:1; font-size:13px; padding:6px 10px;" autocomplete="off">
+                  </div>
+                  <select id="clientSelect" name="client_id" required style="margin-top:6px;">
+                    <option value="">-- Seleccione un cliente --</option>
+                    ${clients.map(c => `<option value="${c.id}" ${row?.client_id === c.id ? 'selected' : ''}>${escapeHtml(c.name)} ${c.phone ? `(${escapeHtml(c.phone)})` : ''}</option>`).join('')}
+                  </select>
+                </label>
+                <button type="button" id="toggleNewClientBtn" class="btn btn-small btn-ghost" style="margin-left:10px; height: 36px; white-space: nowrap;">+ Crear nuevo</button>
+              </div>
+
+              <!-- Vista previa del cliente seleccionado -->
+              <div id="clientPreviewBox" class="hidden" style="background: var(--bg-surface-elevated); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-subtle); font-size: 12px; display: flex; align-items: center; justify-content: space-between;">
+                <div id="clientPreviewContent"></div>
+              </div>
+
+              <!-- Formulario opcional para Crear Nuevo Cliente -->
+              <div id="newClientFields" class="hidden" style="display:flex; flex-direction:column; gap:10px; background:var(--bg-surface-elevated); padding:12px; border-radius:6px; border:1px solid var(--border-strong);">
+                <div style="font-weight:600; font-size:12px; color:var(--text-secondary);">Registrar Nuevo Cliente</div>
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                  <label style="flex:1; min-width:140px; margin:0;">Nombre *
+                    <input type="text" name="new_client_name" id="newClientNameInput" placeholder="Nombre del nuevo cliente">
+                  </label>
+                  <label style="flex:1; min-width:140px; margin:0;">Teléfono / WhatsApp
+                    <input type="text" name="new_client_phone" id="newClientPhoneInput" placeholder="Ej. 912345678">
+                  </label>
+                </div>
+                <!-- Banner de advertencia de coincidencias (Prevención de duplicados) -->
+                <div id="duplicateWarningBox" class="hidden" style="background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.3); color: #fbbf24; padding: 8px 10px; border-radius: 4px; font-size: 12px;">
+                  <div style="font-weight: 600; margin-bottom: 4px;">⚠️ Coincidencias encontradas con clientes existentes:</div>
+                  <div id="duplicateMatchesList" style="display: flex; flex-direction: column; gap: 4px;"></div>
+                </div>
+              </div>
+            </div>
             <label class="span-2">Servicio
-              <input name="service" list="servicesList" required value="${escapeHtml(row?.service || '')}" placeholder="Ej. CHATGPT PLUS">
-              <datalist id="servicesList">${getCachedServiceOptions().map((s) => `<option value="${escapeHtml(s)}"></option>`).join('')}</datalist>
+              <select name="product_id" required>
+                <option value="">Seleccione un producto...</option>
+                ${products.map(p => `<option value="${p.id}" ${row?.product_id === p.id ? 'selected' : ''}>${escapeHtml(p.name)}</option>`).join('')}
+              </select>
             </label>
 
             <div class="section-title">Datos de acceso</div>
@@ -1870,7 +2289,10 @@ async function openForm(row = null) {
               </div>
             </div>
             <label class="span-2">Proveedor
-              <input name="provider" value="${escapeHtml(row?.provider || '')}">
+              <select name="provider_id">
+                <option value="">Ninguno (Propio)</option>
+                ${providers.map(p => `<option value="${p.id}" ${row?.provider_id === p.id ? 'selected' : ''}>${escapeHtml(p.name)}</option>`).join('')}
+              </select>
             </label>
 
             <div class="section-title">Opcional</div>
@@ -1899,6 +2321,143 @@ async function openForm(row = null) {
   })
   document.querySelector('#subscriptionForm').addEventListener('submit', saveForm)
 
+  const toggleClientBtn = document.querySelector('#toggleNewClientBtn')
+  const clientSelect = document.querySelector('#clientSelect')
+  const newClientFields = document.querySelector('#newClientFields')
+  const newClientName = document.querySelector('input[name="new_client_name"]')
+
+  const clientSearchInput = document.querySelector('#clientSearchInput')
+  const clientPreviewBox = document.querySelector('#clientPreviewBox')
+  const clientPreviewContent = document.querySelector('#clientPreviewContent')
+  const newClientNameInput = document.querySelector('#newClientNameInput')
+  const newClientPhoneInput = document.querySelector('#newClientPhoneInput')
+  const duplicateWarningBox = document.querySelector('#duplicateWarningBox')
+  const duplicateMatchesList = document.querySelector('#duplicateMatchesList')
+
+  function updateClientPreview() {
+    const selectedId = clientSelect?.value
+    if (!selectedId || !clientPreviewBox || !clientPreviewContent) {
+      if (clientPreviewBox) clientPreviewBox.classList.add('hidden')
+      return
+    }
+
+    const client = clients.find(c => c.id === selectedId)
+    if (!client) {
+      clientPreviewBox.classList.add('hidden')
+      return
+    }
+
+    const activeCount = rows.filter(r => r.client_id === selectedId && !r.archived_at).length
+    clientPreviewContent.innerHTML = `
+      <span>👤 <strong>${escapeHtml(client.name)}</strong> ${client.phone ? `· 📞 ${escapeHtml(client.phone)}` : ''}</span>
+      <span style="color: var(--text-muted); font-size: 11px; margin-left: 10px;">${activeCount} suscripción(es) activa(s)</span>
+    `
+    clientPreviewBox.classList.remove('hidden')
+  }
+
+  if (clientSearchInput && clientSelect) {
+    clientSearchInput.addEventListener('input', (e) => {
+      const term = e.target.value.toLowerCase().trim()
+      const options = clientSelect.querySelectorAll('option')
+      options.forEach(opt => {
+        if (!opt.value) return
+        const text = opt.textContent.toLowerCase()
+        if (!term || text.includes(term)) {
+          opt.style.display = ''
+        } else {
+          opt.style.display = 'none'
+        }
+      })
+    })
+  }
+
+  clientSelect?.addEventListener('change', updateClientPreview)
+  if (row?.client_id) {
+    updateClientPreview()
+  }
+
+  function checkDuplicates() {
+    const nameVal = (newClientNameInput?.value || '').trim().toLowerCase()
+    const phoneVal = (newClientPhoneInput?.value || '').trim().replace(/[^0-9]/g, '')
+
+    if (!duplicateWarningBox || !duplicateMatchesList) return
+
+    if ((!nameVal || nameVal.length < 2) && (!phoneVal || phoneVal.length < 4)) {
+      duplicateWarningBox.classList.add('hidden')
+      duplicateMatchesList.innerHTML = ''
+      return
+    }
+
+    const matches = clients.filter(c => {
+      const cName = (c.name || '').toLowerCase()
+      const cPhone = (c.phone || '').replace(/[^0-9]/g, '')
+
+      const nameMatch = nameVal.length >= 2 && cName.includes(nameVal)
+      const phoneMatch = phoneVal.length >= 4 && cPhone && cPhone.includes(phoneVal)
+      return nameMatch || phoneMatch
+    }).slice(0, 3)
+
+    if (matches.length === 0) {
+      duplicateWarningBox.classList.add('hidden')
+      duplicateMatchesList.innerHTML = ''
+      return
+    }
+
+    duplicateMatchesList.innerHTML = matches.map(c => `
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+        <span>• <strong>${escapeHtml(c.name)}</strong> ${c.phone ? `(${escapeHtml(c.phone)})` : ''}</span>
+        <button type="button" class="btn btn-small btn-ghost use-duplicate-client-btn" data-id="${c.id}" style="padding: 2px 8px; font-size: 11px; background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4);">
+          Usar este cliente
+        </button>
+      </div>
+    `).join('')
+
+    duplicateMatchesList.querySelectorAll('.use-duplicate-client-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetId = btn.dataset.id
+        if (targetId && clientSelect) {
+          toggleClientBtn?.click()
+          clientSelect.value = targetId
+          updateClientPreview()
+          toast('Cliente seleccionado.')
+        }
+      })
+    })
+
+    duplicateWarningBox.classList.remove('hidden')
+  }
+
+  newClientNameInput?.addEventListener('input', checkDuplicates)
+  newClientPhoneInput?.addEventListener('input', checkDuplicates)
+
+  if (toggleClientBtn) {
+    toggleClientBtn.addEventListener('click', () => {
+      const isHidden = newClientFields.classList.contains('hidden')
+      if (isHidden) {
+        newClientFields.classList.remove('hidden')
+        clientSelect.disabled = true
+        clientSelect.required = false
+        newClientNameInput.required = true
+        toggleClientBtn.textContent = 'Cancelar'
+        toggleClientBtn.classList.add('btn-danger')
+        toggleClientBtn.classList.remove('btn-ghost')
+        if (clientPreviewBox) clientPreviewBox.classList.add('hidden')
+      } else {
+        newClientFields.classList.add('hidden')
+        clientSelect.disabled = false
+        clientSelect.required = true
+        newClientNameInput.required = false
+        newClientNameInput.value = ''
+        if (newClientPhoneInput) newClientPhoneInput.value = ''
+        if (duplicateWarningBox) duplicateWarningBox.classList.add('hidden')
+        toggleClientBtn.textContent = '+ Crear nuevo'
+        toggleClientBtn.classList.remove('btn-danger')
+        toggleClientBtn.classList.add('btn-ghost')
+        updateClientPreview()
+      }
+    })
+  }
+
   // Mostrar/ocultar el campo de tipo de cambio según la moneda seleccionada.
   // En PEN el TC no aplica; en USDT es obligatorio al guardar.
   const saleCurrencySelect = document.querySelector('select[name="sale_price_currency"]')
@@ -1914,25 +2473,35 @@ async function openForm(row = null) {
   })
 
   // Autollenado de precio y moneda desde catálogo para productos activos
-  const serviceInput = document.querySelector('input[name="service"]')
+  const productSelect = document.querySelector('select[name="product_id"]')
   const salePriceInput = document.querySelector('input[name="sale_price"]')
+  const costInput = document.querySelector('input[name="cost"]')
+  const providerSelect = document.querySelector('select[name="provider_id"]')
 
-  let lastAppliedService = (row?.service || '').trim().toUpperCase()
+  let lastAppliedProductId = row?.product_id || ''
 
   function applyProductSuggestion() {
-    const currentVal = (serviceInput?.value || '').trim().toUpperCase()
+    const currentVal = productSelect?.value || ''
     if (!currentVal) {
-      lastAppliedService = ''
+      lastAppliedProductId = ''
       return
     }
-    if (currentVal === lastAppliedService) return
-    lastAppliedService = currentVal
+    if (currentVal === lastAppliedProductId) return
+    lastAppliedProductId = currentVal
 
-    const prod = findActiveProduct(currentVal)
+    const prod = products.find(p => p.id === currentVal)
     if (!prod) return
 
     if (salePriceInput) {
       salePriceInput.value = prod.sale_price != null ? prod.sale_price : ''
+    }
+    if (costInput) {
+      costInput.value = prod.default_cost != null ? prod.default_cost : ''
+    }
+
+    // Auto-select provider if product has a default provider
+    if (providerSelect && prod.provider_id) {
+      providerSelect.value = prod.provider_id
     }
 
     if (saleCurrencySelect) {
@@ -1943,14 +2512,17 @@ async function openForm(row = null) {
         saleRateInput.value = ''
       }
     }
+    if (costCurrencySelect) {
+      const isProdUSDT = prod.currency === 'USDT'
+      costCurrencySelect.value = isProdUSDT ? 'USDT' : 'PEN'
+      if (costRateInput) {
+        costRateInput.hidden = !isProdUSDT
+        costRateInput.value = ''
+      }
+    }
   }
 
-  serviceInput?.addEventListener('change', applyProductSuggestion)
-  serviceInput?.addEventListener('input', (e) => {
-    if (e.inputType === 'insertReplacementText') {
-      applyProductSuggestion()
-    }
-  })
+  productSelect?.addEventListener('change', applyProductSuggestion)
 
   // Inline email domain autocomplete
   const emailInput = document.querySelector('input[name="username_email"]')
@@ -2156,10 +2728,28 @@ async function saveForm(event) {
     return
   }
 
+  let clientId = fd.get('client_id') || null
+  const newClientName = fd.get('new_client_name')
+
+  if (newClientName && newClientName.trim()) {
+    const newClientPhone = fd.get('new_client_phone') ? fd.get('new_client_phone').trim() : null
+    const { data: newClient, error: clientErr } = await supabase.from('clients').insert([{ name: newClientName.trim(), phone: newClientPhone }]).select().single()
+    if (clientErr) {
+      submit.disabled = false
+      submit.textContent = editingId ? 'Guardar cambios' : 'Registrar suscripción'
+      setLoading(false)
+      toast('Error al crear el nuevo cliente: ' + clientErr.message, 'error')
+      return
+    }
+    clientId = newClient.id
+    // Update local state if needed
+    clients.push(newClient)
+  }
+
   const payload = {
-    client_name: String(fd.get('client_name')).trim(),
-    phone: String(fd.get('phone')).trim() || null,
-    service: String(fd.get('service')).trim().toUpperCase(),
+    client_id: clientId,
+    product_id: fd.get('product_id') || null,
+    provider_id: fd.get('provider_id') || null,
     username_email: String(fd.get('username_email')).trim() || null,
     password: String(fd.get('password')).trim() || null,
     profile: String(fd.get('profile')).trim() || null,
@@ -2172,7 +2762,6 @@ async function saveForm(event) {
     cost_currency: costCurrency,
     sale_price_exchange_rate: saleRate.rate,
     cost_exchange_rate: costRate.rate,
-    provider: String(fd.get('provider')).trim() || null,
     start_date: startDate || null,
     expiry_date: expiryDate || null,
     extras: parseExtras(fd.get('extras_text')),
@@ -2186,10 +2775,10 @@ async function saveForm(event) {
     const res = await supabase.from('subscriptions').update(payload).eq('id', editingId)
     error = res.error
   } else {
-    const res = await supabase.rpc('create_subscription', {
-      p_client_name: payload.client_name,
-      p_phone: payload.phone,
-      p_service: payload.service,
+    const res = await supabase.rpc('create_subscription_v3', {
+      p_client_id: payload.client_id,
+      p_product_id: payload.product_id,
+      p_provider_id: payload.provider_id,
       p_username_email: payload.username_email,
       p_password: payload.password,
       p_profile: payload.profile,
@@ -2201,10 +2790,9 @@ async function saveForm(event) {
       p_cost_currency: payload.cost_currency,
       p_sale_exchange_rate: payload.sale_price_currency === 'PEN' ? null : payload.sale_price_exchange_rate,
       p_cost_exchange_rate: payload.cost_currency === 'PEN' ? null : payload.cost_exchange_rate,
-      p_provider: payload.provider,
       p_start_date: payload.start_date,
       p_expiry_date: payload.expiry_date,
-      p_provider_expiry_date: payload.provider_expiry_date ?? null,
+      p_provider_expiry_date: null,
       p_extras: payload.extras,
       p_notes: payload.notes,
       p_idempotency_key: currentFormIdempotencyKey
@@ -2226,6 +2814,25 @@ async function saveForm(event) {
   toast('Datos guardados.')
   setLoading(false)
   await loadRows()
+}
+
+async function loadWhatsAppTemplates() {
+  try {
+    const { data, error } = await supabase.from('whatsapp_templates').select('id, content')
+    if (error) {
+      console.error('Error loading templates:', error)
+      return
+    }
+    const newTemplates = {}
+    if (data) {
+      data.forEach(item => {
+        newTemplates[item.id] = item.content
+      })
+    }
+    setTemplates(newTemplates)
+  } catch (err) {
+    console.error('Failed to load templates:', err)
+  }
 }
 
 async function boot() {
@@ -2252,6 +2859,7 @@ async function boot() {
     loginScreen()
   } else {
     appShell()
+    await loadWhatsAppTemplates()
     await loadRows()
   }
 
@@ -2287,6 +2895,7 @@ async function boot() {
       loginScreen('Sesión cerrada.')
     } else {
       appShell()
+      await loadWhatsAppTemplates()
       await loadRows()
     }
   })
