@@ -52,13 +52,31 @@ export function renderShellMarkup({ userName = '', contentHtml = '', activeNav =
 
         <nav class="sidebar-nav" aria-label="Módulos">
           <div class="nav-section-label">Gestión</div>
-          <a href="#inicio" class="nav-item ${isInicio ? 'active' : ''}" data-nav="inicio" data-tooltip="Inicio" ${isInicio ? 'aria-current="page"' : ''}>
+          <a href="#inicio" class="nav-item ${activeNav === 'inicio' ? 'active' : ''}" data-nav="inicio" data-tooltip="Inicio" ${activeNav === 'inicio' ? 'aria-current="page"' : ''}>
             ${SHELL_ICONS.home}
             <span class="nav-text">Inicio</span>
           </a>
-          <a href="#suscripciones" class="nav-item ${isSubs ? 'active' : ''}" data-nav="subscriptions" data-tooltip="Suscripciones" ${isSubs ? 'aria-current="page"' : ''}>
+          <a href="#clientes" class="nav-item ${activeNav === 'clientes' ? 'active' : ''}" data-nav="clientes" data-tooltip="Clientes" ${activeNav === 'clientes' ? 'aria-current="page"' : ''}>
+            <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            <span class="nav-text">Clientes</span>
+          </a>
+          <a href="#suscripciones" class="nav-item ${activeNav === 'subscriptions' ? 'active' : ''}" data-nav="subscriptions" data-tooltip="Suscripciones" ${activeNav === 'subscriptions' ? 'aria-current="page"' : ''}>
             ${SHELL_ICONS.subscriptions}
             <span class="nav-text">Suscripciones</span>
+          </a>
+          <a href="#productos" class="nav-item ${activeNav === 'productos' ? 'active' : ''}" data-nav="productos" data-tooltip="Catálogo" ${activeNav === 'productos' ? 'aria-current="page"' : ''}>
+            <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
+            <span class="nav-text">Catálogo</span>
+          </a>
+          <a href="#proveedores" class="nav-item ${activeNav === 'proveedores' ? 'active' : ''}" data-nav="proveedores" data-tooltip="Proveedores" ${activeNav === 'proveedores' ? 'aria-current="page"' : ''}>
+            <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+            <span class="nav-text">Proveedores</span>
+          </a>
+
+          <div class="nav-section-label" style="margin-top: 15px;">Configuración</div>
+          <a href="#whatsapp-templates" class="nav-item ${activeNav === 'whatsappTemplates' ? 'active' : ''}" data-nav="whatsappTemplates" data-tooltip="WhatsApp" ${activeNav === 'whatsappTemplates' ? 'aria-current="page"' : ''}>
+            <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            <span class="nav-text">Plantillas WhatsApp</span>
           </a>
         </nav>
 

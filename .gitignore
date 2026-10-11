@@ -1,7 +1,21 @@
 node_modules/
 dist/
-.env
 .DS_Store
+
+# Entorno y credenciales
+.env
+.env.*
+!.env.example
+.mcp.json
+.agents/mcp_config.json
+
+# Herramientas y temporales de Supabase / CLI
+supabase/.temp/
+.kilo/
+
+# Referencias externas y auditorías locales
+REFERENCIAS PRO VENTAS/
+audit_*.md
 
 # Backups locales
 src/app fase*.js
