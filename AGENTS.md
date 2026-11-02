@@ -7,7 +7,7 @@ Acelerar implementaciones, reducir el consumo de tokens y evitar ciclos repetiti
 
 1. **Foco en Lectura e Inspección:**
    - Leer únicamente archivos, funciones y dependencias estrictamente relacionados con la solicitud.
-   - Consultar `docs/ARCHITECTURE.md` solo cuando sea pertinente; evitar cargar documentación completa innecesariamente.
+   - Consultar `docs/ARQUITECTURA.md` solo cuando sea pertinente; evitar cargar documentación completa innecesariamente.
 
 2. **Estrategia de Backend y Supabase:**
    - Para backend, consultar primero los esquemas declarativos locales (`supabase/migrations/`) y usar Supabase MCP únicamente para verificar información vigente.
@@ -18,12 +18,12 @@ Acelerar implementaciones, reducir el consumo de tokens y evitar ciclos repetiti
    - Resolver autónomamente errores de código, sintaxis y coherencia entre archivos antes de dar por finalizada la tarea.
 
 4. **Restricciones de Entorno y Seguridad:**
-   - **No ejecutar comandos costosos o repetitivos** que el usuario prefiera ejecutar personalmente, especialmente `npm run build`.
+   - **Ejecutar `npm run build` al cerrar cada tarea** para verificar que no existan errores de compilación ni advertencias de empaquetado antes de entregar.
    - **No ejecutar escrituras en Supabase**, ni `db push`, ni `migration repair`, ni borrados remotos ni operaciones destructivas sin autorización previa explícita.
    - Mantener totalmente intactos los datos financieros, las políticas RLS existentes y los mecanismos de autenticación, salvo solicitud expresa.
 
 5. **Mantenibilidad y Recursos:**
-   - Actualizar la documentación técnica (`docs/ARCHITECTURE.md`) únicamente cuando cambien relaciones, contratos, estructura o decisiones arquitectónicas.
+   - Actualizar la documentación técnica (`docs/ARQUITECTURA.md`) únicamente cuando cambien relaciones, contratos, estructura o decisiones arquitectónicas.
    - No incorporar dependencias, frameworks o herramientas nuevas si las existentes resuelven el problema.
    - Utilizar subagentes solo para tareas independientes que brinden una ventaja clara de procesamiento o aislamiento.
 

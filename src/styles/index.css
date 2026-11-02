@@ -1,0 +1,12 @@
+@import './tokens.css';
+@import './base.css';
+@import './layout.css';
+@import './components.css';
+@import './views/inicio.css';
+@import './views/suscripciones.css';
+@import './views/form.css';
+@import './views/clientes.css';
+@import './views/productos.css';
+@import './views/proveedores.css';
+@import './views/plantillas.css';
+

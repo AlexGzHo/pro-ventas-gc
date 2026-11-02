@@ -1,0 +1,190 @@
+/* ==========================================================================
+PRO VENTAS GC — Base Styles (Reset, Typography, Buttons, Inputs, Badges, Utilities)
+========================================================================== */
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: var(--bg-canvas);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: var(--fs-body, 14.5px);
+  line-height: 1.5;
+}
+button, input, select, textarea { font: inherit; color-scheme: inherit; }
+select option,
+.filter-select option { background-color: var(--bg-card); color: var(--text-primary); font-weight: 400; padding: 6px 10px; }
+button { cursor: pointer; }
+.hidden { display: none !important; }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+/* ==========================================================================
+Focus & Accessibility
+========================================================================== */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
+/* ==========================================================================
+Typography
+========================================================================== */
+h1, h2, h3, h4, h5, h6 { color: var(--text-primary); margin-top: 0; }
+p { margin-top: 0; margin-bottom: 0.75rem; }
+small { font-size: var(--fs-small, 11.5px); }
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.9em;
+  background: var(--bg-surface-sunken);
+  padding: 2px 5px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-subtle);
+}
+/* ==========================================================================
+Buttons
+========================================================================== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-elevated);
+  color: var(--text-secondary);
+  border-radius: var(--radius-buttons);
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 550;
+  letter-spacing: -0.01em;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.btn:hover { background: var(--bg-card-hover); border-color: var(--border-strong); color: var(--text-primary); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: 0.6; cursor: not-allowed; pointer-events: none; }
+.btn-primary { background: var(--color-brand); border-color: var(--color-brand); color: #ffffff; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35); }
+.btn-primary:hover { background: var(--color-brand-hover); border-color: var(--color-brand-hover); color: #ffffff; }
+.btn-outline { background: transparent; border-color: var(--border-strong); color: var(--text-primary); }
+.btn-outline:hover { background: var(--bg-surface-elevated); border-color: var(--color-brand); }
+.btn-danger { color: var(--status-danger-text); border-color: var(--status-danger-border); background: var(--status-danger-bg); }
+.btn-danger:hover { background: rgba(239, 68, 68, 0.18); border-color: rgba(239, 68, 68, 0.4); color: var(--status-danger-text); }
+.btn-ghost { background: transparent; border-color: transparent; color: var(--text-muted); }
+.btn-ghost:hover { background: var(--bg-hover-ghost); color: var(--text-primary); border-color: var(--border-subtle); }
+.btn-full { width: 100%; }
+.btn-small { padding: 5px 9px; font-size: 12px; border-radius: 5px; }
+.link-btn {
+  background: transparent;
+  border: none;
+  color: #60a5fa;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 0;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+.link-btn:hover { color: #93c5fd; text-decoration: underline; }
+/* ==========================================================================
+Inputs & Forms
+========================================================================== */
+label { display: block; font-size: var(--fs-label, 14px); color: var(--text-secondary); margin-bottom: 4px; }
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="date"],
+input[type="number"],
+input[type="search"],
+input[type="tel"],
+select,
+textarea,
+.form-control {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-inputs);
+  color: var(--text-primary);
+  font-size: 13.5px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
+}
+input:focus,
+select:focus,
+textarea:focus,
+.form-control:focus { border-color: var(--color-brand); box-shadow: 0 0 0 3px var(--color-brand-ring); }
+.form-stack { display: flex; flex-direction: column; gap: 12px; }
+.form-group { margin-bottom: 14px; }
+.form-label { display: block; font-weight: 500; margin-bottom: 6px; color: var(--text-secondary); }
+/* Email ghost autocomplete */
+.email-input-wrapper { position: relative; display: inline-flex; width: 100%; }
+.email-input-wrapper input { width: 100%; }
+.email-ghost {
+  position: absolute;
+  pointer-events: none;
+  color: var(--text-dim, #888);
+  border: none;
+  background: transparent;
+  white-space: pre;
+  overflow: hidden;
+  top: 8px;
+  left: 12px;
+  font-size: 13.5px;
+}
+/* ==========================================================================
+Badges
+========================================================================== */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: var(--radius-badges);
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.badge-success,
+.badge-active { background: var(--status-success-bg); color: var(--status-success-text); border-color: var(--status-success-border); }
+.badge-warning { background: var(--status-warning-bg); color: var(--status-warning-text); border-color: var(--status-warning-border); }
+.badge-danger { background: var(--status-danger-bg); color: var(--status-danger-text); border-color: var(--status-danger-border); }
+.badge-neutral { background: var(--status-neutral-bg); color: var(--status-neutral-text); border-color: var(--status-neutral-border); }
+.badge-icon { display: inline-flex; align-items: center; }
+/* Owner Dots */
+.owner-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+.owner-dot-alex { background-color: var(--owner-alex, #3b82f6); box-shadow: 0 0 6px rgba(59, 130, 246, 0.5); }
+.owner-dot-liz { background-color: var(--owner-liz, #ec4899); box-shadow: 0 0 6px rgba(236, 72, 153, 0.5); }
+/* Utility boxes & feedback */
+.empty { padding: 32px 20px; text-align: center; color: var(--text-muted); font-size: 14px; }
+.empty strong { display: block; font-size: 16px; color: var(--text-primary); margin-bottom: 4px; }
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

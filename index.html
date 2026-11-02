@@ -1,11 +1,22 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0b1220" />
+    <meta name="theme-color" content="#080b11" />
     <meta name="description" content="Administrador privado de suscripciones PRO VENTAS GC" />
     <title>PRO VENTAS GC</title>
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem('pv_theme');
+          var theme = stored || (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+          document.documentElement.setAttribute('data-theme', theme);
+          var metaTheme = document.querySelector('meta[name="theme-color"]');
+          if (metaTheme) metaTheme.setAttribute('content', theme === 'light' ? '#f8fafc' : '#080b11');
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="app"></div>

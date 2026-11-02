@@ -1,0 +1,535 @@
+/* ==========================================================================
+PRO VENTAS GC — Formulario de Suscripción V2 & Modal de Renovación
+========================================================================== */
+/* --------------------------------------------------------------------------
+Layout y Estructura del Formulario
+-------------------------------------------------------------------------- */
+.sub-form-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4, 16px);
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+}
+.sub-form-block {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-cards, 12px);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.sub-form-block-title {
+  margin: 0 0 2px;
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: -0.01em;
+}
+.sub-block-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--color-brand-subtle, #172b4d);
+  color: var(--color-brand, #3b82f6);
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid var(--color-brand-border, rgba(59, 130, 246, 0.35));
+}
+.sub-form-block-desc { margin: 0 0 6px; font-size: 12.5px; color: var(--text-muted); }
+.sub-form-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.sub-form-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.sub-form-field { display: flex; flex-direction: column; gap: 4px; position: relative; }
+.sub-form-field label { font-size: 13px; font-weight: 550; color: var(--text-secondary); }
+.sub-req { color: var(--status-danger-text, #f87171); margin-left: 2px; }
+.sub-hint { font-size: 11px; font-weight: normal; color: var(--text-muted); }
+.sub-field-error {
+  font-size: 11.5px;
+  color: var(--status-danger-text, #f87171);
+  margin-top: 2px;
+  min-height: 16px;
+  line-height: 1.3;
+}
+.copy-tc-btn { margin-top: 4px; font-size: 11px; padding: 2px 8px; }
+.sub-hidden { display: none !important; }
+/* --------------------------------------------------------------------------
+Control Combinado de Cliente (Buscar o Crear)
+-------------------------------------------------------------------------- */
+.sub-client-control { display: flex; flex-direction: column; gap: 8px; position: relative; }
+/* Tarjeta de cliente seleccionado */
+.sub-client-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--bg-surface-elevated, #131e33);
+  border: 1px solid var(--border-strong, #334664);
+  border-radius: var(--radius-md, 8px);
+  gap: 12px;
+}
+.sub-client-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm, 6px);
+  background: var(--color-brand-subtle, #172b4d);
+  color: var(--color-brand-hover, #60a5fa);
+  font-weight: 700;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid var(--color-brand-border, rgba(59, 130, 246, 0.35));
+}
+.sub-client-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sub-client-name {
+  font-size: 13.5px;
+  font-weight: 650;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sub-client-contact {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+}
+.sub-client-contact a {
+  text-decoration: none;
+  color: var(--status-success-text, #34d399);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.sub-client-contact a:hover { text-decoration: underline; }
+.sub-client-change-btn {
+  padding: 4px 10px;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+/* Buscador combinado de cliente */
+.sub-client-search-wrap { position: relative; width: 100%; }
+.sub-client-search-field { position: relative; display: flex; align-items: center; width: 100%; }
+.sub-client-search-icon {
+  position: absolute;
+  left: 10px;
+  color: var(--text-muted);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+.sub-client-search-input {
+  width: 100%;
+  padding: 9px 34px 9px 34px;
+  border-radius: var(--radius-inputs, 8px);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-sunken, #060910);
+  color: var(--text-primary);
+  font-size: 13.5px;
+}
+.sub-client-search-input:focus { border-color: var(--color-brand); outline: none; box-shadow: 0 0 0 2px var(--color-brand-ring); }
+.sub-client-clear-btn {
+  position: absolute;
+  right: 8px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+}
+.sub-client-clear-btn:hover { color: var(--text-primary); }
+/* Dropdown de resultados y creación */
+.sub-client-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--bg-surface-elevated, #131e33);
+  border: 1px solid var(--border-strong, #334664);
+  border-radius: var(--radius-md, 8px);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+  max-height: 250px;
+  overflow-y: auto;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+}
+.sub-client-dropdown-item {
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background 0.12s ease;
+  font-size: 13px;
+}
+.sub-client-dropdown-item:last-child { border-bottom: none; }
+.sub-client-dropdown-item:hover,
+.sub-client-dropdown-item.highlighted { background: var(--bg-card-hover, #10182b); }
+.sub-dropdown-item-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sub-dropdown-item-name { font-weight: 600; color: var(--text-primary); }
+.sub-dropdown-item-contact {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.sub-dropdown-item-meta { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.sub-dropdown-item-badge {
+  font-size: 10.5px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--bg-card);
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle);
+}
+.sub-dropdown-create-item {
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  background: var(--color-brand-subtle, #172b4d);
+  color: var(--color-brand-hover, #60a5fa);
+  font-size: 13px;
+  font-weight: 600;
+  border-top: 1px solid var(--color-brand-border, rgba(59, 130, 246, 0.35));
+  transition: background 0.12s ease;
+}
+.sub-dropdown-create-item:hover,
+.sub-dropdown-create-item.highlighted { background: rgba(59, 130, 246, 0.25); color: #ffffff; }
+.sub-dropdown-empty { padding: 12px; text-align: center; color: var(--text-muted); font-size: 12.5px; }
+/* Formulario inline para nuevo cliente */
+.sub-client-inline-create {
+  background: var(--bg-surface-elevated, #131e33);
+  border: 1px dashed var(--color-brand-border, rgba(59, 130, 246, 0.4));
+  border-radius: var(--radius-md, 8px);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sub-inline-header { display: flex; align-items: center; justify-content: space-between; }
+.sub-inline-title {
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--color-brand-hover, #60a5fa);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+/* Alerta de detección de duplicados */
+.sub-duplicate-alert {
+  background: var(--status-warning-bg, rgba(245, 158, 11, 0.12));
+  border: 1px solid var(--status-warning-border, rgba(245, 158, 11, 0.28));
+  color: var(--status-warning-text, #fbbf24);
+  padding: 10px 12px;
+  border-radius: var(--radius-sm, 6px);
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sub-duplicate-title { font-weight: 650; display: flex; align-items: center; gap: 6px; }
+.sub-duplicate-list { display: flex; flex-direction: column; gap: 6px; }
+.sub-duplicate-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sub-duplicate-use-btn {
+  padding: 2px 8px;
+  font-size: 11px;
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.sub-duplicate-use-btn:hover { background: rgba(245, 158, 11, 0.35); }
+/* --------------------------------------------------------------------------
+Servicio, Sugerencias de Catálogo y Autocompletado Ghost
+-------------------------------------------------------------------------- */
+.sub-suggested-price-hint { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+.email-input-wrapper { position: relative; display: flex; align-items: center; width: 100%; }
+.email-input-wrapper input { width: 100%; position: relative; z-index: 1; background: transparent; }
+.email-ghost {
+  position: absolute;
+  top: 0;
+  left: 0;
+  color: var(--text-dim, #64748b);
+  pointer-events: none;
+  white-space: pre;
+  overflow: hidden;
+  box-sizing: border-box;
+  opacity: 0.6;
+  z-index: 0;
+}
+/* --------------------------------------------------------------------------
+Accesos: Password Toggle Wrap
+-------------------------------------------------------------------------- */
+.sub-password-wrap { position: relative; display: flex; align-items: center; width: 100%; }
+.sub-password-wrap input { width: 100%; padding-right: 36px; }
+.sub-password-toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: var(--text-dim, #64748b);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+.sub-password-toggle:hover { color: var(--text-primary); }
+/* --------------------------------------------------------------------------
+Vencimiento y Atajos Rápidos
+-------------------------------------------------------------------------- */
+.sub-period-shortcuts {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+.sub-period-btn {
+  padding: 3px 8px;
+  font-size: 11.5px;
+  font-weight: 550;
+  border-radius: var(--radius-sm, 6px);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-elevated, #131e33);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+.sub-period-btn:hover { background: var(--bg-card-hover, #10182b); border-color: var(--color-brand); color: var(--text-primary); }
+/* --------------------------------------------------------------------------
+Bloque Plegable "Más opciones"
+-------------------------------------------------------------------------- */
+.sub-collapsible-block { border: 1px solid var(--border-subtle); border-radius: var(--radius-cards, 12px); background: var(--bg-card); overflow: hidden; }
+.sub-collapsible-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  cursor: pointer;
+  user-select: none;
+  background: var(--bg-surface-elevated, #131e33);
+  transition: background 0.12s ease;
+  list-style: none;
+}
+.sub-collapsible-summary::-webkit-details-marker { display: none; }
+.sub-collapsible-summary:hover { background: var(--bg-card-hover, #10182b); }
+.sub-collapsible-left { display: flex; flex-direction: column; gap: 2px; }
+.sub-collapsible-title { font-size: 14px; font-weight: 650; color: var(--text-primary); }
+.sub-collapsible-hint { font-size: 12px; color: var(--text-muted); }
+.sub-collapsible-chevron { color: var(--text-muted); transition: transform 0.2s ease; display: flex; align-items: center; }
+.sub-collapsible-block[open] .sub-collapsible-chevron { transform: rotate(180deg); }
+.sub-collapsible-body {
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border-top: 1px solid var(--border-subtle);
+}
+/* --------------------------------------------------------------------------
+Resumen Financiero del Formulario
+-------------------------------------------------------------------------- */
+.sub-financial-summary {
+  background: var(--bg-surface-sunken, #060910);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md, 8px);
+  padding: 12px 16px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+.sub-summary-item { display: flex; flex-direction: column; gap: 2px; }
+.sub-summary-label { font-size: 11.5px; color: var(--text-muted); }
+.sub-summary-val { font-size: 14px; font-weight: 650; color: var(--text-primary); }
+.sub-profit-positive { color: var(--status-success-text, #34d399) !important; }
+.sub-profit-negative { color: var(--status-danger-text, #f87171) !important; }
+/* --------------------------------------------------------------------------
+Footer del Formulario (Sticky en móvil)
+-------------------------------------------------------------------------- */
+.sub-form-footer {
+  position: sticky;
+  bottom: 0;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border-subtle);
+  padding: 14px 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  z-index: 20;
+}
+/* Formulario en Modal */
+.sub-form-modal { width: min(840px, calc(100% - 24px)); max-height: 92vh; display: flex; flex-direction: column; }
+.sub-form-modal .modal-body { padding: 18px 20px; overflow-y: auto; }
+/* --------------------------------------------------------------------------
+Modal de Renovación
+-------------------------------------------------------------------------- */
+.renew-modal { width: min(480px, calc(100% - 24px)); }
+.renew-modal .modal-body { padding: 18px 20px; display: flex; flex-direction: column; gap: 16px; }
+.renew-header-card {
+  background: var(--bg-surface-elevated, #131e33);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md, 8px);
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.renew-header-client { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+.renew-header-service { font-size: 13px; color: var(--color-brand-hover, #60a5fa); font-weight: 600; }
+.renew-header-expiry { font-size: 12.5px; color: var(--text-muted); margin-top: 2px; }
+.renew-header-expiry strong { color: var(--text-primary); }
+.renew-section { display: flex; flex-direction: column; gap: 8px; }
+.renew-section-label { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+.renew-mode-group { display: flex; gap: 16px; margin-bottom: 4px; }
+.renew-radio-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+  user-select: none;
+}
+.renew-radio { accent-color: var(--color-brand); cursor: pointer; }
+.renew-date-wrapper { display: flex; flex-direction: column; gap: 4px; }
+.renew-date-input { width: 100%; }
+.renew-auto-text { font-size: 12px; color: var(--text-muted); }
+/* Chips de duración */
+.renew-chips-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.renew-chip {
+  padding: 8px 10px;
+  border-radius: var(--radius-sm, 6px);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-elevated, #131e33);
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.14s ease;
+}
+.renew-chip:hover { background: var(--bg-card-hover, #10182b); border-color: var(--color-brand); color: var(--text-primary); }
+.renew-chip.active { background: var(--color-brand, #3b82f6); border-color: var(--color-brand); color: #ffffff; box-shadow: 0 0 0 2px var(--color-brand-ring); }
+/* Vista previa de renovación */
+.renew-preview-box {
+  background: var(--bg-surface-sunken, #060910);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md, 8px);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.renew-preview-row { display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; }
+.renew-preview-label { color: var(--text-muted); }
+.renew-preview-val { color: var(--text-primary); font-weight: 600; }
+.renew-preview-highlight { border-top: 1px solid var(--border-subtle); padding-top: 8px; margin-top: 2px; }
+.renew-preview-end { color: var(--status-success-text, #34d399); font-size: 13.5px; font-weight: 700; }
+.renew-footer-actions { display: flex; justify-content: flex-end; gap: 8px; width: 100%; }
+/* Estado de éxito y WhatsApp en renovación */
+.renew-success-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  padding: 16px 8px;
+}
+.renew-success-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--status-success-bg, rgba(16, 185, 129, 0.12));
+  color: var(--status-success-text, #34d399);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--status-success-border, rgba(16, 185, 129, 0.28));
+}
+.renew-success-title { font-size: 16px; font-weight: 700; color: var(--text-primary); }
+.renew-success-desc { font-size: 13px; color: var(--text-muted); }
+.renew-success-desc strong { color: var(--status-success-text, #34d399); }
+.renew-success-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin-top: 8px;
+}
+.renew-wa-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-decoration: none;
+  font-weight: 600;
+}
+/* --------------------------------------------------------------------------
+Responsive (móvil 360px y escritorio)
+-------------------------------------------------------------------------- */
+
+@media (max-width: 640px) {
+.sub-form-modal,
+.renew-modal {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 100% !important;
+  max-height: 100vh !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+}
+.sub-form-container { padding: 0; }
+.sub-form-block { padding: 14px 16px; }
+.sub-form-grid-2,
+.sub-form-grid-3 { grid-template-columns: 1fr; gap: 10px; }
+.sub-financial-summary { grid-template-columns: 1fr; gap: 8px; }
+.renew-chips-grid { grid-template-columns: repeat(2, 1fr); }
+.sub-form-footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 12px 16px;
+  background: var(--bg-card);
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.4);
+  border-top: 1px solid var(--border-strong);
+}
+/* Padding inferior adicional para evitar que el contenido quede oculto tras el footer fijo */
+.sub-form-container,
+.sub-form-modal .modal-body { padding-bottom: 74px; }
+.sub-form-modal .modal-body { padding-bottom: 74px; }
+}

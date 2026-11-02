@@ -1,16 +1,40 @@
 // Shell administrativo para PRO VENTAS GC
-// Maneja sidebar colapsable (escritorio: 230px / 68px), drawer móvil, backdrop, menú de usuario y persistencia en localStorage.
+// Maneja sidebar colapsable (escritorio: 304px / 68px), barra inferior móvil, drawer móvil, backdrop, menú de usuario y títulos de página.
+
+import { ICONS } from './ui/icons.js';
 
 const SIDEBAR_COLLAPSED_KEY = 'pv_sidebar_collapsed';
 
-// Iconos SVG en línea consistentes con el diseño y Lucide
+const SECTION_TITLES = {
+  inicio: 'Inicio',
+  subscriptions: 'Suscripciones',
+  clientes: 'Clientes',
+  productos: 'Catálogo',
+  proveedores: 'Proveedores',
+  whatsappTemplates: 'Plantillas WhatsApp',
+  subscriptionForm: 'Suscripción'
+};
+
+export function updateDocumentTitle(navKey) {
+  const sectionName = SECTION_TITLES[navKey] || 'Panel';
+  document.title = `${sectionName} — PRO VENTAS GC`;
+}
+
+// Iconos reutilizados desde ui/icons.js con compatibilidad
 const SHELL_ICONS = {
-  menu: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>`,
-  home: `<svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>`,
-  subscriptions: `<svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M3 10h18"></path><path d="M8 14h.01"></path><path d="M12 14h.01"></path><path d="M16 14h.01"></path></svg>`,
-  logout: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>`,
-  close: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`,
-  collapse: `<svg class="collapse-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>`
+  menu: ICONS.menu,
+  home: ICONS.home,
+  subscriptions: ICONS.subscriptions,
+  clients: ICONS.users,
+  products: ICONS.products,
+  providers: ICONS.providers,
+  whatsapp: ICONS.messageSquare,
+  logout: ICONS.logout,
+  close: ICONS.close,
+  collapse: ICONS.collapse,
+  sun: ICONS.sun,
+  moon: ICONS.moon,
+  plus: ICONS.plus
 };
 
 /**
@@ -18,7 +42,7 @@ const SHELL_ICONS = {
  * @param {Object} options
  * @param {string} options.userName - Nombre del usuario activo
  * @param {string} options.contentHtml - HTML del contenido principal
- * @param {string} options.activeNav - Sección activa ('inicio' o 'subscriptions')
+ * @param {string} options.activeNav - Sección activa ('inicio', 'subscriptions', etc.)
  * @returns {string} Markup HTML del shell completo
  */
 export function renderShellMarkup({ userName = '', contentHtml = '', activeNav = 'inicio' }) {
@@ -26,6 +50,7 @@ export function renderShellMarkup({ userName = '', contentHtml = '', activeNav =
   const initial = safeUser.charAt(0).toUpperCase();
   const isInicio = activeNav === 'inicio';
   const isSubs = activeNav === 'subscriptions';
+  const isClients = activeNav === 'clientes';
 
   return `
     <div class="app-layout">
@@ -51,31 +76,38 @@ export function renderShellMarkup({ userName = '', contentHtml = '', activeNav =
         </div>
 
         <nav class="sidebar-nav" aria-label="Módulos">
-          <div class="nav-section-label">Gestión</div>
-          <a href="#inicio" class="nav-item ${activeNav === 'inicio' ? 'active' : ''}" data-nav="inicio" data-tooltip="Inicio" ${activeNav === 'inicio' ? 'aria-current="page"' : ''}>
+          <div class="sidebar-quick-action">
+            <button id="sidebarNewSubBtn" class="btn btn-primary btn-sidebar-new" type="button" title="Registrar nueva suscripción">
+              ${SHELL_ICONS.plus}
+              <span class="nav-text">Nueva suscripción</span>
+            </button>
+          </div>
+
+          <div class="nav-section-label">Operación</div>
+          <a href="#inicio" class="nav-item ${isInicio ? 'active' : ''}" data-nav="inicio" data-tooltip="Inicio" ${isInicio ? 'aria-current="page"' : ''}>
             ${SHELL_ICONS.home}
             <span class="nav-text">Inicio</span>
           </a>
-          <a href="#clientes" class="nav-item ${activeNav === 'clientes' ? 'active' : ''}" data-nav="clientes" data-tooltip="Clientes" ${activeNav === 'clientes' ? 'aria-current="page"' : ''}>
-            <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-            <span class="nav-text">Clientes</span>
-          </a>
-          <a href="#suscripciones" class="nav-item ${activeNav === 'subscriptions' ? 'active' : ''}" data-nav="subscriptions" data-tooltip="Suscripciones" ${activeNav === 'subscriptions' ? 'aria-current="page"' : ''}>
+          <a href="#suscripciones" class="nav-item ${isSubs ? 'active' : ''}" data-nav="subscriptions" data-tooltip="Suscripciones" ${isSubs ? 'aria-current="page"' : ''}>
             ${SHELL_ICONS.subscriptions}
             <span class="nav-text">Suscripciones</span>
           </a>
+          <a href="#clientes" class="nav-item ${isClients ? 'active' : ''}" data-nav="clientes" data-tooltip="Clientes" ${isClients ? 'aria-current="page"' : ''}>
+            ${SHELL_ICONS.clients}
+            <span class="nav-text">Clientes</span>
+          </a>
+
+          <div class="nav-section-label nav-section-config">Configuración</div>
           <a href="#productos" class="nav-item ${activeNav === 'productos' ? 'active' : ''}" data-nav="productos" data-tooltip="Catálogo" ${activeNav === 'productos' ? 'aria-current="page"' : ''}>
-            <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
+            ${SHELL_ICONS.products}
             <span class="nav-text">Catálogo</span>
           </a>
           <a href="#proveedores" class="nav-item ${activeNav === 'proveedores' ? 'active' : ''}" data-nav="proveedores" data-tooltip="Proveedores" ${activeNav === 'proveedores' ? 'aria-current="page"' : ''}>
-            <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+            ${SHELL_ICONS.providers}
             <span class="nav-text">Proveedores</span>
           </a>
-
-          <div class="nav-section-label" style="margin-top: 15px;">Configuración</div>
           <a href="#whatsapp-templates" class="nav-item ${activeNav === 'whatsappTemplates' ? 'active' : ''}" data-nav="whatsappTemplates" data-tooltip="WhatsApp" ${activeNav === 'whatsappTemplates' ? 'aria-current="page"' : ''}>
-            <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            ${SHELL_ICONS.whatsapp}
             <span class="nav-text">Plantillas WhatsApp</span>
           </a>
         </nav>
@@ -85,7 +117,6 @@ export function renderShellMarkup({ userName = '', contentHtml = '', activeNav =
             <div class="user-avatar" aria-hidden="true">${initial}<span class="status-indicator"></span></div>
             <div class="user-info">
               <span class="user-name">${safeUser}</span>
-              <span class="user-role">Administrador</span>
             </div>
           </button>
 
@@ -111,17 +142,32 @@ export function renderShellMarkup({ userName = '', contentHtml = '', activeNav =
               <span class="topbar-title">PRO VENTAS GC</span>
             </div>
           </div>
-
-          <div class="topbar-actions">
-            <!-- Botón de catálogo preservado de forma no visible para compatibilidad con app.js -->
-            <button id="catalogBtn" type="button" class="hidden" style="display: none;" hidden aria-hidden="true"></button>
-          </div>
         </header>
 
         <main id="mainContent" class="main app-main">
           ${contentHtml}
         </main>
       </div>
+
+      <!-- Barra inferior fija para navegación rápida en móvil -->
+      <nav id="mobileBottomNav" class="mobile-bottom-nav" aria-label="Navegación móvil rápida">
+        <a href="#inicio" class="bottom-nav-item ${isInicio ? 'active' : ''}" data-nav="inicio">
+          <span class="bottom-nav-icon">${SHELL_ICONS.home}</span>
+          <span class="bottom-nav-label">Inicio</span>
+        </a>
+        <a href="#suscripciones" class="bottom-nav-item ${isSubs ? 'active' : ''}" data-nav="subscriptions">
+          <span class="bottom-nav-icon">${SHELL_ICONS.subscriptions}</span>
+          <span class="bottom-nav-label">Suscrip.</span>
+        </a>
+        <a href="#clientes" class="bottom-nav-item ${isClients ? 'active' : ''}" data-nav="clientes">
+          <span class="bottom-nav-icon">${SHELL_ICONS.clients}</span>
+          <span class="bottom-nav-label">Clientes</span>
+        </a>
+        <button id="bottomNavMoreBtn" class="bottom-nav-item bottom-nav-btn" type="button" aria-label="Más opciones de menú" aria-expanded="false">
+          <span class="bottom-nav-icon">${SHELL_ICONS.menu}</span>
+          <span class="bottom-nav-label">Más</span>
+        </button>
+      </nav>
 
       <div id="modalHost"></div>
     </div>
@@ -131,14 +177,15 @@ export function renderShellMarkup({ userName = '', contentHtml = '', activeNav =
 /**
  * Inicializa el comportamiento interactivo del shell:
  * - Colapso en escritorio con persistencia en localStorage
- * - Botón de contraer en la cabecera de la sidebar
+ * - Barra inferior móvil y drawer sincronizado
  * - Menú contextual de usuario en la tarjeta inferior
- * - Drawer en móvil con backdrop, tecla Escape y bloqueo de scroll
+ * - Actualización dinámica del título de la pestaña del navegador
  * @param {Object} callbacks
  * @param {Function} callbacks.onLogout - Callback al hacer click en Cerrar sesión
  * @param {Function} callbacks.onNavigate - Callback al navegar entre secciones del sidebar (recibe navKey, e)
+ * @param {Function} [callbacks.onNewSubscription] - Callback al hacer click en el botón "Nueva suscripción"
  */
-export function initShell({ onLogout, onNavigate } = {}) {
+export function initShell({ onLogout, onNavigate, onNewSubscription } = {}) {
   const sidebar = document.querySelector('#appSidebar');
   const toggleBtn = document.querySelector('#sidebarToggleBtn');
   const collapseBtn = document.querySelector('#sidebarCollapseBtn');
@@ -148,6 +195,7 @@ export function initShell({ onLogout, onNavigate } = {}) {
   const userBtn = document.querySelector('#sidebarUserBtn');
   const userMenu = document.querySelector('#userContextMenu');
   const userLogoutBtn = document.querySelector('#userLogoutBtn');
+  const bottomNavMoreBtn = document.querySelector('#bottomNavMoreBtn');
 
   if (!sidebar) return;
 
@@ -178,6 +226,10 @@ export function initShell({ onLogout, onNavigate } = {}) {
     if (toggleBtn) {
       toggleBtn.setAttribute('aria-expanded', 'true');
     }
+    if (bottomNavMoreBtn) {
+      bottomNavMoreBtn.setAttribute('aria-expanded', 'true');
+      bottomNavMoreBtn.classList.add('active');
+    }
   };
 
   // Drawer móvil: Cerrar
@@ -187,6 +239,10 @@ export function initShell({ onLogout, onNavigate } = {}) {
     document.body.classList.remove('drawer-locked');
     if (toggleBtn) {
       toggleBtn.setAttribute('aria-expanded', 'false');
+    }
+    if (bottomNavMoreBtn) {
+      bottomNavMoreBtn.setAttribute('aria-expanded', 'false');
+      bottomNavMoreBtn.classList.remove('active');
     }
   };
 
@@ -226,6 +282,28 @@ export function initShell({ onLogout, onNavigate } = {}) {
     }
   };
 
+  // Sincronizar clases activas en la barra móvil inferior
+  const syncBottomNavActive = (targetNav) => {
+    document.querySelectorAll('#mobileBottomNav .bottom-nav-item[data-nav]').forEach((btn) => {
+      const isTarget = btn.dataset.nav === targetNav ||
+        (targetNav === 'subscriptionForm' && btn.dataset.nav === 'subscriptions');
+      btn.classList.toggle('active', isTarget);
+    });
+  };
+
+  // Click en botón de acción rápida "Nueva suscripción"
+  const newSubBtn = sidebar.querySelector('#sidebarNewSubBtn');
+  if (newSubBtn) {
+    newSubBtn.addEventListener('click', () => {
+      if (!isDesktop()) {
+        closeDrawer();
+      }
+      if (typeof onNewSubscription === 'function') {
+        onNewSubscription();
+      }
+    });
+  }
+
   // Click en enlaces de navegación del sidebar
   sidebar.querySelectorAll('.sidebar-nav .nav-item').forEach((item) => {
     item.addEventListener('click', (e) => {
@@ -233,11 +311,38 @@ export function initShell({ onLogout, onNavigate } = {}) {
       if (!isDesktop()) {
         closeDrawer();
       }
+      updateDocumentTitle(navKey);
+      syncBottomNavActive(navKey);
       if (onNavigate) {
         onNavigate(navKey, e);
       }
     });
   });
+
+  // Click en enlaces de la barra inferior móvil
+  document.querySelectorAll('#mobileBottomNav .bottom-nav-item[data-nav]').forEach((item) => {
+    item.addEventListener('click', (e) => {
+      const navKey = item.dataset.nav;
+      closeDrawer();
+      updateDocumentTitle(navKey);
+      syncBottomNavActive(navKey);
+      if (onNavigate) {
+        onNavigate(navKey, e);
+      }
+    });
+  });
+
+  // Botón "Más" en la barra inferior móvil
+  if (bottomNavMoreBtn) {
+    bottomNavMoreBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (sidebar.classList.contains('drawer-open')) {
+        closeDrawer();
+      } else {
+        openDrawer();
+      }
+    });
+  }
 
   // Click en botón hamburguesa en topbar (móvil)
   if (toggleBtn) {
@@ -329,4 +434,22 @@ export function initShell({ onLogout, onNavigate } = {}) {
     }
   };
   window.addEventListener('resize', handleResize);
+
+  // Sincronización automática de document.title y estado de navegación
+  const syncTitleAndActiveFromDom = () => {
+    const activeItem = sidebar.querySelector('.nav-item.active');
+    if (activeItem?.dataset?.nav) {
+      updateDocumentTitle(activeItem.dataset.nav);
+      syncBottomNavActive(activeItem.dataset.nav);
+    }
+  };
+
+  // Observador de cambios en la clase .active del sidebar
+  const navObserver = new MutationObserver(() => {
+    syncTitleAndActiveFromDom();
+  });
+  navObserver.observe(sidebar, { subtree: true, attributes: true, attributeFilter: ['class', 'aria-current'] });
+
+  // Título inicial
+  syncTitleAndActiveFromDom();
 }

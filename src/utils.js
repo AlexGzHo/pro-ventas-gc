@@ -65,18 +65,27 @@ export function convertPENToUSDT(amount, exchangeRate) {
 
 export function dateOnly(value) {
   if (!value) return null
-  const [y, m, d] = value.split('-').map(Number)
-  return new Date(y, m - 1, d)
+  if (value instanceof Date) {
+    if (isNaN(value.getTime())) return null
+    return new Date(value.getFullYear(), value.getMonth(), value.getDate())
+  }
+  const str = String(value).trim()
+  const match = str.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (match) {
+    return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+  }
+  const d = new Date(str)
+  if (isNaN(d.getTime())) return null
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate())
 }
 
 export function formatDate(value) {
   const d = dateOnly(value)
-  if (!d) return '—'
-  return new Intl.DateTimeFormat('es-PE', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(d)
+  if (!d || isNaN(d.getTime())) return '—'
+  const day = String(d.getDate()).padStart(2, '0')
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const year = d.getFullYear()
+  return `${day}/${month}/${year}`
 }
 
 export function toISODate(date) {
@@ -90,12 +99,38 @@ export function todayISO() {
   return toISODate(new Date())
 }
 
-export function daysUntil(value) {
-  const target = dateOnly(value)
-  if (!target) return null
-  const now = new Date()
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  return Math.round((target - today) / 86400000)
+export function daysUntil(value, referenceDate = null) {
+  if (!value) return null
+  let y, m, d
+  if (value instanceof Date) {
+    if (isNaN(value.getTime())) return null
+    y = value.getFullYear()
+    m = value.getMonth()
+    d = value.getDate()
+  } else {
+    const str = String(value).trim()
+    const match = str.match(/^(\d{4})-(\d{2})-(\d{2})/)
+    if (match) {
+      y = Number(match[1])
+      m = Number(match[2]) - 1
+      d = Number(match[3])
+    } else {
+      const dt = new Date(str)
+      if (isNaN(dt.getTime())) return null
+      y = dt.getFullYear()
+      m = dt.getMonth()
+      d = dt.getDate()
+    }
+  }
+
+  const now = referenceDate ? (referenceDate instanceof Date ? referenceDate : dateOnly(referenceDate)) : new Date()
+  if (!now || isNaN(now.getTime())) return null
+
+  // Usar Date.UTC con las partes locales de año, mes y día para calcular la diferencia
+  // exacta de días calendario, independiente de la hora local o conversiones UTC cerca de medianoche.
+  const targetUtc = Date.UTC(y, m, d)
+  const todayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
+  return Math.round((targetUtc - todayUtc) / 86400000)
 }
 
 export function statusFor(value, archived_at = null) {
@@ -150,6 +185,14 @@ export function escapeHtml(value = '') {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;')
+}
+
+export function rowSaleCurrency(row) {
+  return normalizeCurrency(row?.sale_price_currency)
+}
+
+export function rowCostCurrency(row) {
+  return normalizeCurrency(row?.cost_currency)
 }
 
 export async function copyText(text) {

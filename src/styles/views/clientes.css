@@ -1,0 +1,252 @@
+/* ==========================================================================
+PRO VENTAS GC — Vista Clientes & Modales Asociados
+========================================================================== */
+.clients-view { display: flex; flex-direction: column; gap: var(--space-4, 16px); width: 100%; }
+/* --- Grid de Clientes --- */
+.clients-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-3, 12px); }
+.client-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-cards);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: var(--shadow-card);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.15s ease;
+  cursor: pointer;
+  position: relative;
+}
+.client-card:hover { border-color: var(--border-strong); box-shadow: var(--shadow-card-hover); transform: translateY(-1px); }
+.client-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.client-card-name {
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--text-primary);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.client-card-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.client-card-contact { display: flex; align-items: center; gap: 6px; font-size: 12.5px; }
+.client-contact-link { display: inline-flex; align-items: center; gap: 5px; text-decoration: none; }
+.client-card-notes {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+/* Logos y resumen de suscripciones en tarjeta */
+.client-subs-summary { display: flex; align-items: center; gap: 10px; margin-top: 2px; }
+.client-subs-avatars { display: flex; align-items: center; }
+.client-sub-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-card);
+  object-fit: cover;
+  background-color: var(--bg-surface);
+  flex-shrink: 0;
+}
+.client-sub-avatar:not(:first-child) { margin-left: -8px; }
+.client-sub-avatar-initials {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-card);
+  background-color: var(--bg-surface-elevated);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10.5px;
+  font-weight: 650;
+  flex-shrink: 0;
+}
+.client-sub-avatar-initials:not(:first-child) { margin-left: -8px; }
+.client-sub-avatar-overflow {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-card);
+  margin-left: -8px;
+  background-color: var(--bg-surface-elevated);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.client-subs-count { font-size: 12.5px; font-weight: 600; color: var(--text-secondary); }
+.client-card-footer {
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+.client-card-status-label { color: var(--text-muted); }
+/* --- Ficha de Cliente en Modal --- */
+.client-profile-content { display: flex; flex-direction: column; gap: 20px; }
+.client-profile-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.client-profile-header-info { display: flex; flex-direction: column; gap: 6px; }
+.client-profile-title { margin: 0; font-size: 20px; font-weight: 700; color: var(--text-primary); }
+.client-profile-notes {
+  margin-top: 4px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  background: var(--bg-surface-elevated);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm, 6px);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.client-profile-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+.client-kpi-box { background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); padding: 10px 14px; border-radius: var(--radius-inputs, 8px); }
+.client-kpi-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.client-kpi-val { font-size: 20px; font-weight: 750; color: var(--text-primary); margin-top: 2px; }
+.client-kpi-val.warning { color: var(--status-warning-text); }
+.client-kpi-val.danger { color: var(--status-danger-text); }
+.client-priority-alert {
+  padding: 10px 14px;
+  border-radius: var(--radius-inputs, 8px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+.client-priority-alert.danger { background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; }
+.client-priority-alert.warning { background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.3); color: #fbbf24; }
+.client-priority-alert.success { background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399; }
+.client-priority-alert.info { background: rgba(148, 163, 184, 0.08); border: 1px solid rgba(148, 163, 184, 0.2); color: var(--text-muted); }
+.client-subs-section-title {
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--text-primary);
+  margin: 0 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.client-sub-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-inputs, 8px);
+  background: var(--bg-card);
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.client-sub-item-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 200px;
+  flex: 1;
+}
+.client-sub-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--bg-surface);
+  flex-shrink: 0;
+}
+.client-sub-logo-initials {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--bg-surface-elevated);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 650;
+  flex-shrink: 0;
+}
+.client-sub-title { font-size: 14px; font-weight: 600; color: var(--text-primary); margin: 0 0 2px; }
+.client-sub-details { font-size: 12px; color: var(--text-muted); }
+.client-sub-meta { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.client-sub-expiry { text-align: right; min-width: 110px; }
+.client-sub-expiry-label { font-size: 10.5px; color: var(--text-muted); }
+.client-sub-expiry-date { font-size: 12.5px; font-weight: 600; color: var(--text-primary); }
+.client-archived-section { margin-top: 14px; }
+.client-archived-title { font-size: 13.5px; color: var(--text-muted); margin: 0 0 10px; }
+.client-sub-item.archived { opacity: 0.75; }
+/* --- Estilos del Modal de Fusión y Reasignación --- */
+.merge-dialog-content,
+.reassign-dialog-content { display: flex; flex-direction: column; gap: 16px; }
+.merge-banner {
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-inputs, 8px);
+  padding: 12px 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.merge-banner-icon {
+  color: var(--color-brand);
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.merge-preview-box {
+  background: var(--bg-surface-sunken);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-inputs, 8px);
+  padding: 12px 14px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+.merge-preview-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+.merge-preview-list {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  line-height: 1.5;
+}
+.merge-dialog-footer,
+.reassign-dialog-footer { display: flex; justify-content: flex-end; gap: 8px; width: 100%; }
+/* --- Responsive Clientes --- */
+
+@media (max-width: 680px) {
+.clients-grid { grid-template-columns: 1fr; }
+.client-sub-item { flex-direction: column; align-items: flex-start; }
+.client-sub-meta { width: 100%; justify-content: space-between; }
+.client-sub-expiry { text-align: left; }
+.client-sub-expiry { text-align: left; }
+}

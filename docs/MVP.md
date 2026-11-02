@@ -1,43 +1,47 @@
-# MVP
+# Alcance del Producto (MVP): PRO VENTAS GC
 
-## Qué resuelve
-PRO VENTAS GC reemplaza el control manual de suscripciones que actualmente se lleva en Excel. Centraliza clientes, accesos, precios, costos, proveedores, vencimientos y acciones rápidas de WhatsApp.
+## 1. Propósito y Valor del Negocio
+PRO VENTAS GC centraliza y automatiza el control operativo y financiero de cuentas y suscripciones de streaming, entretenimiento y software para dos usuarios operativos (**Alex** y **Liz**), erradicando las planillas de cálculo manuales.
 
-## Usuarios
-La primera versión está diseñada para dos personas: el propietario y Liz. No existe registro público. Las dos cuentas se crean manualmente en Supabase Auth y comparten la misma información.
+---
 
-## Funciones incluidas
-- Iniciar y cerrar sesión.
-- Registrar una suscripción.
-- Editar una suscripción.
-- Eliminar una suscripción con confirmación.
-- Renovar por 7 días, 15 días, 1 mes, 3 meses, 6 meses o 12 meses.
-- Mostrar días restantes automáticamente.
-- Identificar suscripciones activas, próximas, que vencen hoy y vencidas.
-- Buscar por cliente, celular, servicio, correo, proveedor o notas.
-- Filtrar por servicio y estado.
-- Copiar cada credencial por separado.
-- Copiar todas las credenciales en un bloque listo para pegar.
-- Abrir WhatsApp con mensaje de cobro/recordatorio.
-- Abrir WhatsApp con mensaje de actualización de accesos.
-- Abrir WhatsApp con las credenciales de la cuenta.
-- Mostrar ingresos, egresos, ganancia y conteos por estado.
-- Usar servicios predefinidos y escribir servicios nuevos sin cambiar el código.
-- Funcionar en PC y celular.
+## 2. Modelo de Entidades y Base de Datos
+El sistema opera sobre un esquema relacional normalizado en PostgreSQL (Supabase) con integridad referencial y seguridad RLS:
 
-## Servicios iniciales
-Netflix, IPTV, Disney+, MAX, Prime Video, Paramount+, Movistar TV, Crunchyroll, Flujo TV, Claro Video, DirecTV Go, Spotify, Vix, YouTube Premium, Apple TV+, Viki Rakuten, Canva Pro, Plex, ChatGPT Plus, Gemini Pro, Claude Pro y CapCut Pro.
+1. **Clientes (`clients`):** Directorio unificado con nombre, teléfono WhatsApp normalizado y notas.
+2. **Productos (`products`):** Catálogo formal de servicios con precios sugeridos de venta, costos base y categorías (Entretenimiento, IA y Productividad, Diseño, Educación, Almacenamiento, Otros).
+3. **Proveedores (`providers`):** Directorio de proveedores de cuentas con canales de contacto directo (WhatsApp, Telegram, Web).
+4. **Suscripciones (`subscriptions`):** Registros operativos de cuentas activas y dadas de baja, vinculando cliente, producto, proveedor, credenciales completas, fechas de vigencia y propietario asignado.
+5. **Renovaciones (`subscription_renewals`):** Historial transaccional de cada periodo renovado con montos financieros, tipo de cambio e idempotencia.
+6. **Plantillas de WhatsApp (`whatsapp_templates`):** Mensajería dinámica personalizable sincronizada para cobro, recordatorio, actualización y credenciales.
 
-## Fuera del MVP
-No se incluye en esta primera versión:
-- WhatsApp Business Cloud API.
-- Envíos automáticos de mensajes.
-- Facturación electrónica.
-- Pasarela de pagos.
-- Roles complejos o permisos por empleado.
-- Aplicación móvil nativa.
-- IA dentro del producto final.
-- Servidor propio.
-- Historial contable avanzado.
+---
 
-Estas funciones pueden añadirse después sin rehacer el MVP.
+## 3. Capacidades Incluidas en el Sistema
+
+### Operación y Ventas
+- Autenticación segura vía Supabase Auth con recuperación de contraseña.
+- Alta transaccional de suscripciones con detección de duplicados, creación inline de clientes y clave de idempotencia (`create_subscription_v3`).
+- Renovaciones ágiles por periodos predefinidos (`7d`, `15d`, `1m`, `3m`, `6m`, `12m`) con fecha automática o manual (`process_renewal`).
+- Ciclo de vida completo: edición, baja temporal (archivado), reactivación y eliminación transaccional atómica (`delete_subscription_transactional`).
+- Copiado seguro e individual de credenciales (correo, contraseña, perfil, PIN, URL) y bloque unificado de accesos.
+- Mensajería WhatsApp instantánea (`wa.me`) con codificación de caracteres, soporte de emojis e interpolación de variables.
+
+### Inteligencia y Finanzas
+- Dashboard ejecutivo con lista priorizada *"Requiere atención"* (cuentas por vencer ≤ 3 días o vencidas) para cobranza rápida.
+- 4 KPIs financieros consolidados con alternancia en tiempo real entre Soles (PEN) y Dólares (USDT) con tipo de cambio dinámico.
+- Historial financiero estructurado por periodo y cálculo automático de márgenes de ganancia.
+
+### Mantenimiento y Catálogos
+- Fusión asistida de perfiles de clientes (`merge_clients`) para transferir suscripciones y consolidar números de teléfono.
+- Reasignación de dependencias de proveedores (`merge_providers`) antes de eliminación.
+- Gestión de catálogo de productos clasificados por categoría formal.
+- Personalización de plantillas de WhatsApp desde la propia interfaz.
+
+---
+
+## 4. Fuera del Alcance Actual
+- Envío automatizado no supervisado vía WhatsApp Business Cloud API (los envíos se abren en WhatsApp y se confirman humanamente).
+- Facturación electrónica con SUNAT.
+- Pasarelas de cobro automáticas integradas (Stripe / Niubiz / MercadoPago).
+- Registro público de usuarios (acceso exclusivo para los dos administradores autorizados).

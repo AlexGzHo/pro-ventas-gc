@@ -18,6 +18,9 @@ REFERENCIAS PRO VENTAS/
 audit_*.md
 
 # Backups locales
+backups/
+*.bak
+*.old
 src/app fase*.js
 src/app release.js
 src/app antes*.js

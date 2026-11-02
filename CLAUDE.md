@@ -40,28 +40,13 @@ Debe incluir:
 - Preparado para Netlify.
 
 ## Modelo de datos
-La versión MVP usa una sola tabla principal: `public.subscriptions`.
-
-Campos principales:
-- client_name
-- phone
-- service
-- username_email
-- password
-- profile
-- pin
-- access_url
-- sale_price
-- cost
-- provider
-- start_date
-- expiry_date
-- provider_expiry_date
-- extras jsonb
-- notes
-- created_by
-- created_at
-- updated_at
+Esquema relacional en Supabase (PostgreSQL) con 6 tablas principales e integridad referencial:
+1. `public.clients`: Directorio de clientes con nombre, celular (`phone`) y notas.
+2. `public.products`: Catálogo de servicios con precios sugeridos, costos sugeridos y categorías.
+3. `public.providers`: Directorio de proveedores de servicios con canales de contacto.
+4. `public.subscriptions`: Registros de suscripciones asignadas (vinculan cliente, producto, proveedor, credenciales, vigencia, montos y propietario).
+5. `public.subscription_renewals`: Historial financiero y control transaccional de renovaciones sucesivas con claves de idempotencia.
+6. `public.whatsapp_templates`: Almacenamiento sincronizado de plantillas de mensajería (recordatorio, cobro, actualización, datos).
 
 ## Seguridad
 - Supabase Auth administra las sesiones.

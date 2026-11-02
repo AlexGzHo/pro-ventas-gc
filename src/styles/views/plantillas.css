@@ -1,0 +1,145 @@
+/* ==========================================================================
+PRO VENTAS GC — Vista Plantillas WhatsApp
+========================================================================== */
+.templates-view { display: flex; flex-direction: column; gap: var(--space-4, 16px); width: 100%; }
+.templates-hero-actions { display: flex; align-items: center; gap: 8px; }
+/* --- Barra de Variables Disponibles Clicables --- */
+.template-variables-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-cards);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: var(--shadow-card);
+}
+.template-variables-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.template-variables-title {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 650;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.template-variables-help { font-size: 12px; color: var(--text-muted); }
+.template-variables-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.template-var-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm, 6px);
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  color: #60a5fa;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.template-var-tag:hover { background: rgba(37, 99, 235, 0.15); border-color: rgba(37, 99, 235, 0.4); color: #93c5fd; transform: translateY(-1px); }
+.template-var-tag:active { transform: translateY(0); }
+/* --- Barra de Simulación de Vencimiento --- */
+.template-sim-card {
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-inputs, 8px);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.template-sim-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.template-sim-buttons { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.template-sim-btn { font-size: 12px; padding: 4px 10px; }
+.template-sim-btn.active { background: var(--color-brand); color: #ffffff; border-color: var(--color-brand); }
+/* --- Grid de Plantillas --- */
+.templates-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-4, 16px); }
+.template-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-cards);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: var(--shadow-card);
+}
+.template-card.full-width { grid-column: 1 / -1; }
+.template-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.template-card-title { margin: 0; font-size: 15px; font-weight: 650; color: var(--text-primary); }
+.template-card-desc { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.template-textarea {
+  width: 100%;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 12.5px;
+  line-height: 1.5;
+  padding: 12px;
+  border-radius: var(--radius-inputs, 6px);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  resize: vertical;
+  min-height: 130px;
+  box-sizing: border-box;
+}
+.template-textarea:focus { border-color: var(--color-brand); outline: none; }
+.template-preview-wrapper { display: flex; flex-direction: column; gap: 6px; }
+.template-preview-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+.template-preview-box {
+  background: var(--bg-surface-sunken);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-inputs, 6px);
+  padding: 12px 14px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.5;
+  min-height: 80px;
+  font-family: inherit;
+}
+/* Barra inferior de guardado */
+.template-bottom-actions {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-cards);
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow-card);
+}
+.template-status-msg { font-size: 13px; font-weight: 600; color: var(--status-success-text); }
+
+@media (max-width: 860px) {
+.templates-grid { grid-template-columns: 1fr; }
+.template-card.full-width { grid-column: auto; }
+.templates-hero-actions { width: 100%; justify-content: flex-start; }
+.templates-hero-actions { width: 100%; justify-content: flex-start; }
+}

@@ -23,6 +23,15 @@ export const SERVICES = [
   'CAPCUT PRO',
 ]
 
+export const PRODUCT_CATEGORIES = [
+  'Entretenimiento',
+  'IA y Productividad',
+  'Diseño',
+  'Educación',
+  'Almacenamiento',
+  'Otros',
+]
+
 export const credentialLabels = {
   username_email: 'Usuario / correo',
   password: 'Contraseña',

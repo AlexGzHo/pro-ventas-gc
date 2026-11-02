@@ -1,217 +1,547 @@
 import { supabase } from '../supabase.js'
 import { escapeHtml, formatAmount } from '../utils.js'
+import { toast } from '../ui/toast.js'
+import { confirmDialog } from '../ui/confirm.js'
+import { openModal } from '../ui/modal.js'
+import { ICONS } from '../ui/icons.js'
+import { PRODUCT_CATEGORIES } from '../constants.js'
 
-export async function mountProductosView(container) {
-  let productsData = []
+/**
+ * PRO VENTAS GC — Catálogo de Productos
+ * Grid compacto con vista previa de logo, precio base, categoría y estado activo/inactivo.
+ * Creación y edición 100% en ui/modal estándar sin romper el layout.
+ */
+export async function mountProductosView(container, options = {}) {
+  let productsData = options.products || []
+  let providersData = options.providers || []
   let searchTerm = ''
-  let editingId = null
+  let selectedCategory = 'TODAS'
+  let selectedStatus = 'TODOS'
 
   container.innerHTML = `
     <section class="hero">
       <div>
         <h2>Catálogo de Productos</h2>
-        <p>Directorio de servicios comercializados, precios y márgenes.</p>
+        <p>Servicios, precios base sugeridos, categorías y proveedores.</p>
       </div>
-      <button id="btnNewProduct" class="btn btn-primary">+ Nuevo Producto</button>
+      <button id="btnNewProduct" class="btn btn-primary" type="button">
+        ${ICONS.plus} Nuevo producto
+      </button>
     </section>
 
-    <div id="productsMain">
+    <div class="products-view">
       <section class="toolbar">
         <div class="search-box">
-          <span class="search-icon">🔍</span>
-          <input id="productSearch" type="search" placeholder="Buscar producto...">
+          <span class="search-icon" aria-hidden="true">${ICONS.search}</span>
+          <input id="productSearch" type="search" placeholder="Buscar producto o descripción..." autocomplete="off">
+          <button id="productSearchClear" class="search-clear hidden" type="button" title="Limpiar búsqueda" aria-label="Limpiar búsqueda">${ICONS.close}</button>
+        </div>
+
+        <div class="filter-controls">
+          <select id="categoryFilter" class="filter-select" title="Filtrar por categoría">
+            <option value="TODAS">Categoría: Todas</option>
+            ${PRODUCT_CATEGORIES.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('')}
+          </select>
+
+          <select id="statusFilter" class="filter-select" title="Filtrar por estado">
+            <option value="TODOS">Estado: Todos</option>
+            <option value="ACTIVE">Solo Activos</option>
+            <option value="INACTIVE">Solo Inactivos</option>
+          </select>
         </div>
       </section>
 
-      <div id="productFormContainer" class="card hidden" style="margin-bottom: 20px;">
-        <h3 id="productFormTitle" style="margin-top:0;">Registrar Nuevo Producto</h3>
-        <form id="productFormLocal" class="form-stack" style="max-width: 600px;">
-          <label>Nombre del producto *
-            <input type="text" id="prodName" required class="form-control" />
-          </label>
-          <label>URL del Logo (Opcional)
-            <input type="url" id="prodLogoUrl" class="form-control" placeholder="https://..." />
-          </label>
-
-          <div style="display:flex; gap:10px;">
-            <label style="flex:1;">Costo sugerido
-              <input type="number" step="0.01" min="0" id="prodCost" class="form-control" />
-            </label>
-            <label style="flex:1;">Venta sugerida *
-              <input type="number" step="0.01" min="0" required id="prodPrice" class="form-control" />
-            </label>
-            <label style="flex:1;">Moneda
-              <select id="prodCurrency" class="form-control">
-                <option value="PEN">PEN (S/)</option>
-                <option value="USDT">USDT</option>
-              </select>
-            </label>
-          </div>
-          <div style="display:flex; gap:10px; align-items:center;">
-             <label style="margin:0; display:flex; align-items:center; gap:5px;">
-               <input type="checkbox" id="prodActive" checked> Producto activo y visible
-             </label>
-          </div>
-          <div style="display: flex; gap: 10px; margin-top: 10px;">
-            <button type="submit" class="btn btn-primary">Guardar</button>
-            <button type="button" id="productFormCancel" class="btn btn-ghost">Cancelar</button>
-          </div>
-        </form>
+      <div class="results-bar">
+        <div id="catalogResultsLine" class="results-line">Cargando catálogo...</div>
       </div>
 
-      <div class="summary-view-wrapper">
-        <table class="summary-table">
-          <thead>
-            <tr>
-              <th>Producto</th>
-              <th>Costo Sugerido</th>
-              <th>Venta Sugerida</th>
-              <th>Margen Est.</th>
-              <th>Estado</th>
-              <th style="width: 80px;">Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="productosList">
-            <tr><td colspan="6">Cargando...</td></tr>
-          </tbody>
-        </table>
-      </div>
+      <div id="productosGrid" class="products-grid"></div>
     </div>
   `
 
-  const listEl = container.querySelector('#productosList')
-  const formContainer = container.querySelector('#productFormContainer')
-  const form = container.querySelector('#productFormLocal')
+  const gridEl = container.querySelector('#productosGrid')
   const searchInput = container.querySelector('#productSearch')
+  const searchClearBtn = container.querySelector('#productSearchClear')
+  const categoryFilterEl = container.querySelector('#categoryFilter')
+  const statusFilterEl = container.querySelector('#statusFilter')
+  const resultsLineEl = container.querySelector('#catalogResultsLine')
+  const btnNewProduct = container.querySelector('#btnNewProduct')
 
   async function loadData() {
-    listEl.innerHTML = '<tr><td colspan="6" style="text-align:center;">Cargando...</td></tr>'
-    const { data, error } = await supabase.from('products').select('*').order('name')
-    if (error) {
-      listEl.innerHTML = '<tr><td colspan="6">Error cargando productos.</td></tr>'
+    if (productsData.length && !options.forceReload) {
+      if (!providersData.length) {
+        const { data: provRes } = await supabase.from('providers').select('id, name').order('name', { ascending: true })
+        if (provRes) providersData = provRes
+      }
+      renderList()
       return
     }
-    productsData = data || []
+
+    gridEl.innerHTML = '<div class="empty-state">Cargando catálogo...</div>'
+    resultsLineEl.textContent = 'Cargando catálogo...'
+
+    const promises = [
+      supabase.from('products').select('*').order('name', { ascending: true })
+    ]
+    if (!providersData.length) {
+      promises.push(supabase.from('providers').select('id, name').order('name', { ascending: true }))
+    }
+
+    const [prodRes, provRes] = await Promise.all(promises)
+    if (prodRes.error) {
+      gridEl.innerHTML = '<div class="empty-state text-danger">Error cargando productos: ' + escapeHtml(prodRes.error.message) + '</div>'
+      resultsLineEl.textContent = 'Error de carga'
+      return
+    }
+
+    productsData = prodRes.data || []
+    if (provRes?.data) {
+      providersData = provRes.data
+    }
+
     renderList()
+  }
+
+  async function notifyProductsChanged() {
+    if (typeof options.onProductsChanged === 'function') {
+      await options.onProductsChanged()
+    } else {
+      window.dispatchEvent(new CustomEvent('pv-products-changed', { detail: { products: productsData } }))
+    }
+  }
+
+  function getCategoryBadgeClass(cat) {
+    const c = (cat || '').toLowerCase()
+    if (c.includes('entretenimiento')) return 'badge-cat-entretenimiento'
+    if (c.includes('ia') || c.includes('productividad')) return 'badge-cat-ia'
+    if (c.includes('diseño') || c.includes('diseno')) return 'badge-cat-diseno'
+    if (c.includes('educación') || c.includes('educacion')) return 'badge-cat-educacion'
+    if (c.includes('almacenamiento')) return 'badge-cat-almacenamiento'
+    return 'badge-cat-otros'
+  }
+
+  function calculateMargin(cost, sale) {
+    const c = Number(cost) || 0
+    const s = Number(sale) || 0
+    const margin = s - c
+    const pct = s > 0 ? Math.round((margin / s) * 100) : 0
+    return { margin, pct }
   }
 
   function renderList() {
     const q = searchTerm.toLowerCase().trim()
     const filtered = productsData.filter(p => {
-      return !q || (p.name || '').toLowerCase().includes(q)
+      const matchSearch = !q ||
+        (p.name || '').toLowerCase().includes(q) ||
+        (p.description || '').toLowerCase().includes(q)
+      const pCat = p.category || 'Otros'
+      const matchCat = selectedCategory === 'TODAS' || pCat === selectedCategory
+      const matchStatus = selectedStatus === 'TODOS' || (selectedStatus === 'ACTIVE' ? p.active : !p.active)
+      return matchSearch && matchCat && matchStatus
     })
 
+    const count = filtered.length
+    resultsLineEl.textContent = `${count} ${count === 1 ? 'producto' : 'productos'}${selectedCategory !== 'TODAS' || selectedStatus !== 'TODOS' || q ? ' (filtrados)' : ''}`
+
     if (filtered.length === 0) {
-      listEl.innerHTML = '<tr><td colspan="6" class="empty-state">No se encontraron productos.</td></tr>'
+      gridEl.innerHTML = `
+        <div class="empty-state">
+          <strong>No se encontraron productos</strong>
+          <span>Intenta modificar los filtros de búsqueda o categoría.</span>
+        </div>
+      `
       return
     }
 
-    listEl.innerHTML = filtered.map(p => {
-      const cost = Number(p.default_cost || 0)
-      const sale = Number(p.sale_price || 0)
-      const margin = sale - cost
-      const marginPct = sale > 0 ? (margin / sale * 100).toFixed(0) : 0
-      const curr = p.currency || 'PEN'
+    gridEl.innerHTML = filtered.map(p => {
+      const initials = (p.name || 'P').trim().substring(0, 2).toUpperCase()
+      const logoEl = p.logo_url
+        ? `<div class="product-card-logo"><img src="${escapeHtml(p.logo_url)}" alt="${escapeHtml(p.name)}" onerror="this.outerHTML='<span class=\\'product-card-logo-initials\\'>${escapeHtml(initials)}</span>'" /></div>`
+        : `<div class="product-card-logo"><span class="product-card-logo-initials">${escapeHtml(initials)}</span></div>`
 
-      const logoHtml = p.logo_url
-        ? `<img src="${escapeHtml(p.logo_url)}" alt="logo" style="width:24px; height:24px; border-radius:4px;">`
-        : `<div style="width:24px; height:24px; border-radius:4px; background:var(--border-strong); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:bold;">${p.name.substring(0,2).toUpperCase()}</div>`
+      const { margin, pct } = calculateMargin(p.default_cost, p.sale_price)
+      const hasCost = p.default_cost !== null && p.default_cost !== undefined && p.default_cost !== ''
+      const prov = providersData.find(pr => pr.id === p.provider_id)
 
       return `
-        <tr style="opacity: ${p.active ? '1' : '0.5'};">
-          <td>
-            <div style="display:flex; align-items:center; gap:8px;">
-               ${logoHtml}
-               <div style="font-weight: 500;">${escapeHtml(p.name)}</div>
+        <article class="product-card ${p.active ? '' : 'inactive'}" data-id="${p.id}">
+          <div class="product-card-top">
+            ${logoEl}
+            <div class="product-card-header-info">
+              <h3 class="product-card-title" title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</h3>
+              <span class="badge ${getCategoryBadgeClass(p.category)} product-card-category">
+                ${escapeHtml(p.category || 'Otros')}
+              </span>
             </div>
-          </td>
-          <td>${p.default_cost ? formatAmount(p.default_cost, curr) : '<span style="color:var(--text-muted);">—</span>'}</td>
-          <td>${formatAmount(p.sale_price, curr)}</td>
-          <td>
-             <span style="color:${margin > 0 ? 'var(--status-ok-text)' : (margin < 0 ? 'var(--status-err-text)' : 'inherit')}">
-                ${formatAmount(margin, curr)} (${marginPct}%)
-             </span>
-          </td>
-          <td>
-            ${p.active ? '<span class="badge badge-success">Activo</span>' : '<span class="badge badge-neutral">Inactivo</span>'}
-          </td>
-          <td>
-            <div style="display:flex; gap: 8px;">
-              <button class="btn btn-small btn-ghost btn-edit-prod" data-id="${p.id}">✎</button>
+          </div>
+
+          <div class="product-card-body">
+            <div class="product-card-price-row">
+              <span class="product-card-price">
+                ${formatAmount(p.sale_price ?? 0, p.currency || 'PEN')}
+              </span>
+              ${hasCost ? `
+                <span class="product-card-margin ${margin >= 0 ? 'positive' : 'negative'}" title="Margen estimado">
+                  ${margin >= 0 ? '+' : ''}${formatAmount(margin, p.currency || 'PEN')} (${pct}%)
+                </span>
+              ` : ''}
             </div>
-          </td>
-        </tr>
+
+            <div class="product-card-meta">
+              ${prov ? `<span>Proveedor: <strong>${escapeHtml(prov.name)}</strong></span>` : ''}
+              ${p.default_cost ? `<span>Costo sugerido: ${formatAmount(p.default_cost, p.currency || 'PEN')}</span>` : ''}
+            </div>
+
+            ${p.description ? `
+              <div class="product-card-desc" title="${escapeHtml(p.description)}">
+                ${escapeHtml(p.description)}
+              </div>
+            ` : ''}
+          </div>
+
+          <div class="product-card-actions">
+            <button type="button"
+              class="product-status-btn ${p.active ? 'active' : 'inactive'} btn-toggle-status"
+              data-id="${p.id}"
+              title="Cambiar estado activo/inactivo"
+            >
+              ${p.active ? 'Activo' : 'Inactivo'}
+            </button>
+
+            <div class="product-action-btns">
+              <button type="button" class="btn btn-small btn-ghost btn-edit-product" data-id="${p.id}" title="Editar producto" aria-label="Editar producto">
+                ${ICONS.edit} Editar
+              </button>
+              <button type="button" class="btn btn-small btn-ghost btn-delete-product" data-id="${p.id}" title="Eliminar producto" aria-label="Eliminar producto">
+                ${ICONS.trash}
+              </button>
+            </div>
+          </div>
+        </article>
       `
     }).join('')
   }
 
-  container.addEventListener('click', (e) => {
-    if (e.target.closest('.btn-edit-prod')) {
-      const id = e.target.closest('.btn-edit-prod').dataset.id
-      const p = productsData.find(x => x.id === id)
-      if (p) {
-        editingId = id
-        document.getElementById('productFormTitle').textContent = 'Editar Producto'
-        document.getElementById('prodName').value = p.name || ''
-        document.getElementById('prodLogoUrl').value = p.logo_url || ''
-        document.getElementById('prodCost').value = p.default_cost || ''
-        document.getElementById('prodPrice').value = p.sale_price !== null ? p.sale_price : ''
-        document.getElementById('prodCurrency').value = p.currency || 'PEN'
-        document.getElementById('prodActive').checked = p.active
-        formContainer.classList.remove('hidden')
-        document.getElementById('prodName').focus()
+  // --- Modal Formulario Producto (Crear / Editar) ---
+  function openProductFormModal(productId = null) {
+    const isEditing = Boolean(productId)
+    const product = isEditing ? productsData.find(p => p.id === productId) : null
+
+    const bodyEl = document.createElement('form')
+    bodyEl.className = 'form-stack'
+    bodyEl.id = 'productForm'
+    bodyEl.innerHTML = `
+      <label>
+        Nombre del producto *
+        <input type="text" id="prodNameInput" required class="form-control" value="${escapeHtml(product?.name || '')}" placeholder="Ej. NETFLIX PREMIUM" />
+      </label>
+
+      <div class="product-modal-grid-2">
+        <label>
+          Categoría
+          <select id="prodCategorySelect" class="form-control">
+            ${PRODUCT_CATEGORIES.map(cat => `
+              <option value="${escapeHtml(cat)}" ${(product?.category || 'Otros') === cat ? 'selected' : ''}>
+                ${escapeHtml(cat)}
+              </option>
+            `).join('')}
+          </select>
+        </label>
+
+        <label>
+          Proveedor predeterminado
+          <select id="prodProviderSelect" class="form-control">
+            <option value="" ${!product?.provider_id ? 'selected' : ''}>(Sin proveedor)</option>
+            ${providersData.map(prov => `
+              <option value="${prov.id}" ${product?.provider_id === prov.id ? 'selected' : ''}>
+                ${escapeHtml(prov.name)}
+              </option>
+            `).join('')}
+          </select>
+        </label>
+      </div>
+
+      <div class="product-modal-grid-3">
+        <label>
+          Venta sugerida *
+          <input type="number" step="0.01" min="0" id="prodPriceInput" required class="form-control" value="${product?.sale_price !== null && product?.sale_price !== undefined ? product.sale_price : ''}" placeholder="0.00" />
+        </label>
+
+        <label>
+          Costo sugerido
+          <input type="number" step="0.01" min="0" id="prodCostInput" class="form-control" value="${product?.default_cost !== null && product?.default_cost !== undefined ? product.default_cost : ''}" placeholder="0.00" />
+        </label>
+
+        <label>
+          Moneda
+          <select id="prodCurrencySelect" class="form-control">
+            <option value="PEN" ${(product?.currency || 'PEN') === 'PEN' ? 'selected' : ''}>S/ (PEN)</option>
+            <option value="USDT" ${product?.currency === 'USDT' ? 'selected' : ''}>USDT</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="product-modal-grid-2">
+        <label>
+          Período sugerido (valor)
+          <input type="number" min="1" id="prodPeriodValInput" class="form-control" value="${product?.default_period_value || ''}" placeholder="Ej. 30" />
+        </label>
+
+        <label>
+          Unidad de período
+          <select id="prodPeriodUnitSelect" class="form-control">
+            <option value="days" ${(product?.default_period_unit || 'days') === 'days' ? 'selected' : ''}>Días</option>
+            <option value="months" ${product?.default_period_unit === 'months' ? 'selected' : ''}>Meses</option>
+            <option value="years" ${product?.default_period_unit === 'years' ? 'selected' : ''}>Años</option>
+          </select>
+        </label>
+      </div>
+
+      <label>
+        URL del Logo (Opcional)
+        <div class="product-logo-input-wrap">
+          <input type="url" id="prodLogoInput" class="form-control" value="${escapeHtml(product?.logo_url || '')}" placeholder="https://ejemplo.com/logo.png" />
+          <div id="prodLogoPreview" class="product-logo-preview-box">
+            ${product?.logo_url ? `<img src="${escapeHtml(product.logo_url)}" alt="" />` : `<span class="text-muted">${ICONS.products}</span>`}
+          </div>
+        </div>
+      </label>
+
+      <label>
+        Descripción / Notas del servicio (Opcional)
+        <textarea id="prodDescInput" class="form-control" rows="2" placeholder="Características de la cuenta, reglas o información de soporte...">${escapeHtml(product?.description || '')}</textarea>
+      </label>
+
+      <label class="product-checkbox-label">
+        <input type="checkbox" id="prodActiveCheck" ${product ? (product.active ? 'checked' : '') : 'checked'} />
+        <span>Producto activo y visible para nuevas suscripciones</span>
+      </label>
+    `
+
+    const footerEl = document.createElement('div')
+    footerEl.className = 'modal-actions'
+    footerEl.innerHTML = `
+      <button type="button" class="btn btn-ghost" id="btnCancelProdForm">Cancelar</button>
+      <button type="submit" form="productForm" class="btn btn-primary" id="btnSaveProd">
+        ${isEditing ? 'Guardar Cambios' : 'Registrar Producto'}
+      </button>
+    `
+
+    const modal = openModal({
+      title: isEditing ? 'Editar Producto' : 'Nuevo Producto',
+      subtitle: isEditing ? product.name : 'Configura un producto o servicio del catálogo.',
+      body: bodyEl,
+      footer: footerEl,
+      size: 'md'
+    })
+
+    footerEl.querySelector('#btnCancelProdForm').addEventListener('click', () => modal.close())
+
+    const logoInput = bodyEl.querySelector('#prodLogoInput')
+    const logoPreview = bodyEl.querySelector('#prodLogoPreview')
+    logoInput.addEventListener('input', () => {
+      const url = logoInput.value.trim()
+      if (url) {
+        logoPreview.innerHTML = `<img src="${escapeHtml(url)}" alt="" onerror="this.outerHTML='<span class=\\'text-muted\\'>${ICONS.warning}</span>'" />`
+      } else {
+        logoPreview.innerHTML = `<span class="text-muted">${ICONS.products}</span>`
       }
+    })
+
+    bodyEl.addEventListener('submit', async (e) => {
+      e.preventDefault()
+      const name = bodyEl.querySelector('#prodNameInput').value.trim()
+      if (!name) {
+        toast('El nombre del producto es obligatorio.', 'error')
+        bodyEl.querySelector('#prodNameInput').focus()
+        return
+      }
+
+      const salePriceVal = bodyEl.querySelector('#prodPriceInput').value
+      const sale_price = Number(salePriceVal)
+      if (isNaN(sale_price) || sale_price < 0) {
+        toast('El precio de venta sugerido debe ser un número mayor o igual a 0.', 'error')
+        return
+      }
+
+      const costVal = bodyEl.querySelector('#prodCostInput').value
+      const default_cost = costVal !== '' ? Number(costVal) : null
+      if (default_cost !== null && (isNaN(default_cost) || default_cost < 0)) {
+        toast('El costo debe ser un número válido.', 'error')
+        return
+      }
+
+      const periodVal = bodyEl.querySelector('#prodPeriodValInput').value
+      const default_period_value = periodVal ? parseInt(periodVal, 10) : null
+
+      const payload = {
+        name,
+        category: bodyEl.querySelector('#prodCategorySelect').value || 'Otros',
+        provider_id: bodyEl.querySelector('#prodProviderSelect').value || null,
+        sale_price,
+        default_cost,
+        currency: bodyEl.querySelector('#prodCurrencySelect').value || 'PEN',
+        default_period_value,
+        default_period_unit: default_period_value ? bodyEl.querySelector('#prodPeriodUnitSelect').value : null,
+        logo_url: logoInput.value.trim() || null,
+        description: bodyEl.querySelector('#prodDescInput').value.trim() || null,
+        active: bodyEl.querySelector('#prodActiveCheck').checked,
+        updated_at: new Date().toISOString()
+      }
+
+      const submitBtn = footerEl.querySelector('#btnSaveProd')
+      submitBtn.disabled = true
+      submitBtn.textContent = 'Guardando...'
+
+      try {
+        if (isEditing) {
+          const { error } = await supabase.from('products').update(payload).eq('id', productId)
+          if (error) throw error
+          toast(`Producto "${name}" actualizado con éxito.`, 'ok')
+        } else {
+          const { error } = await supabase.from('products').insert([payload])
+          if (error) throw error
+          toast(`Producto "${name}" registrado con éxito.`, 'ok')
+        }
+
+        modal.close()
+        options.forceReload = true
+        await loadData()
+        await notifyProductsChanged()
+      } catch (err) {
+        console.error('Error guardando producto:', err)
+        toast('Error al guardar: ' + err.message, 'error')
+        submitBtn.disabled = false
+        submitBtn.textContent = isEditing ? 'Guardar Cambios' : 'Registrar Producto'
+      }
+    })
+  }
+
+  // --- Cambio rápido de estado activo/inactivo ---
+  async function toggleProductStatus(id) {
+    const prod = productsData.find(p => p.id === id)
+    if (!prod) return
+
+    const nextActive = !prod.active
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update({ active: nextActive, updated_at: new Date().toISOString() })
+        .eq('id', id)
+
+      if (error) throw error
+
+      prod.active = nextActive
+      renderList()
+      toast(`Producto ${nextActive ? 'activado' : 'desactivado'}.`, 'ok')
+      await notifyProductsChanged()
+    } catch (err) {
+      console.error('Error al cambiar estado:', err)
+      toast('Error al actualizar estado: ' + err.message, 'error')
+    }
+  }
+
+  // --- Eliminación de Producto ---
+  async function handleDeleteProduct(id) {
+    const prod = productsData.find(p => p.id === id)
+    if (!prod) return
+
+    // Verificar si existen suscripciones vinculadas
+    const { count, error: countErr } = await supabase
+      .from('subscriptions')
+      .select('id', { count: 'exact', head: true })
+      .eq('product_id', id)
+
+    if (countErr) {
+      toast('Error al verificar suscripciones: ' + countErr.message, 'error')
+      return
+    }
+
+    if (count > 0) {
+      await confirmDialog({
+        title: 'Producto con suscripciones asociadas',
+        message: `El producto <strong>${escapeHtml(prod.name)}</strong> tiene <strong>${count}</strong> suscripción(es) vinculada(s).<br><br>No puede eliminarse para no dañar el historial. Puedes marcarlo como <strong>Inactivo</strong> para ocultarlo en nuevos registros.`,
+        confirmText: 'Entendido',
+        cancelText: '',
+        icon: 'warning'
+      })
+      return
+    }
+
+    const confirmed = await confirmDialog({
+      title: '¿Eliminar producto?',
+      message: `¿Estás seguro de que deseas eliminar permanentemente el producto <strong>${escapeHtml(prod.name)}</strong> del catálogo?<br><br><span class="text-danger">Esta acción no se puede deshacer.</span>`,
+      confirmText: 'Eliminar producto',
+      cancelText: 'Cancelar',
+      danger: true
+    })
+
+    if (!confirmed) return
+
+    try {
+      const { error } = await supabase.from('products').delete().eq('id', id)
+      if (error) throw error
+
+      productsData = productsData.filter(p => p.id !== id)
+      toast('Producto eliminado con éxito.', 'ok')
+      renderList()
+      await notifyProductsChanged()
+    } catch (err) {
+      console.error('Error eliminando producto:', err)
+      toast('Error al eliminar: ' + err.message, 'error')
+    }
+  }
+
+  // --- Event Delegation ---
+  container.addEventListener('click', (e) => {
+    const editBtn = e.target.closest('.btn-edit-product')
+    if (editBtn) {
+      openProductFormModal(editBtn.dataset.id)
+      return
+    }
+
+    const deleteBtn = e.target.closest('.btn-delete-product')
+    if (deleteBtn) {
+      handleDeleteProduct(deleteBtn.dataset.id)
+      return
+    }
+
+    const statusBtn = e.target.closest('.btn-toggle-status')
+    if (statusBtn) {
+      toggleProductStatus(statusBtn.dataset.id)
+      return
     }
   })
 
-  document.getElementById('btnNewProduct').addEventListener('click', () => {
-    editingId = null
-    form.reset()
-    document.getElementById('productFormTitle').textContent = 'Registrar Nuevo Producto'
-    document.getElementById('prodActive').checked = true
-    formContainer.classList.remove('hidden')
-    document.getElementById('prodName').focus()
-  })
-
-  document.getElementById('productFormCancel').addEventListener('click', () => {
-    formContainer.classList.add('hidden')
-    form.reset()
-    editingId = null
-  })
-
+  // Filtros
   searchInput.addEventListener('input', (e) => {
     searchTerm = e.target.value
+    searchClearBtn.classList.toggle('hidden', !searchTerm.trim())
     renderList()
   })
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault()
-    const name = document.getElementById('prodName').value.trim()
-    const logo_url = document.getElementById('prodLogoUrl').value.trim() || null
-    const default_cost = document.getElementById('prodCost').value || null
-    const sale_price = document.getElementById('prodPrice').value || 0
-    const currency = document.getElementById('prodCurrency').value
-    const active = document.getElementById('prodActive').checked
+  searchClearBtn.addEventListener('click', () => {
+    searchInput.value = ''
+    searchTerm = ''
+    searchClearBtn.classList.add('hidden')
+    searchInput.focus()
+    renderList()
+  })
 
-    const payload = { name, logo_url, default_cost, sale_price, currency, active }
-    const btn = form.querySelector('button[type="submit"]')
-    btn.disabled = true
-    btn.textContent = 'Guardando...'
+  categoryFilterEl.addEventListener('change', (e) => {
+    selectedCategory = e.target.value
+    categoryFilterEl.classList.toggle('filter-active', selectedCategory !== 'TODAS')
+    renderList()
+  })
 
-    if (editingId) {
-      const { error } = await supabase.from('products').update(payload).eq('id', editingId)
-      if (error) alert('Error al actualizar: ' + error.message)
-    } else {
-      const { error } = await supabase.from('products').insert([payload])
-      if (error) alert('Error al guardar: ' + error.message)
-    }
+  statusFilterEl.addEventListener('change', (e) => {
+    selectedStatus = e.target.value
+    statusFilterEl.classList.toggle('filter-active', selectedStatus !== 'TODOS')
+    renderList()
+  })
 
-    btn.disabled = false
-    btn.textContent = 'Guardar'
-    formContainer.classList.add('hidden')
-    form.reset()
-    editingId = null
-    await loadData()
+  btnNewProduct.addEventListener('click', () => {
+    openProductFormModal(null)
   })
 
   await loadData()

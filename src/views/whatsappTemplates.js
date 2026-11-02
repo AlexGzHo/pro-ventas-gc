@@ -1,14 +1,40 @@
 import { supabase } from '../supabase.js'
-import { defaultTemplates, interpolateTemplate, setTemplates } from '../whatsapp.js'
+import { defaultTemplates, interpolateTemplate, setTemplates, templates } from '../whatsapp.js'
+import { toast } from '../ui/toast.js'
+import { confirmDialog } from '../ui/confirm.js'
+import { ICONS } from '../ui/icons.js'
+import { toISODate } from '../utils.js'
 
-export async function mountWhatsappTemplatesView(container) {
+/**
+ * PRO VENTAS GC — Vista de Plantillas de WhatsApp
+ * Editor reactivo con variables clicables con inserción en el cursor y vista previa en tiempo real.
+ */
+export async function mountWhatsappTemplatesView(container, options = {}) {
   let isSaving = false
+  let activeTextareaId = 'tplReminder'
 
-  // Dummy row for previewing the templates
+  const availableVariables = [
+    { tag: '{{cliente}}', label: 'Nombre del cliente' },
+    { tag: '{{servicio}}', label: 'Nombre del servicio' },
+    { tag: '{{vencimiento}}', label: 'Fecha de vencimiento (DD/MM/AAAA)' },
+    { tag: '{{dias}}', label: 'Frase relativa («vence en X días»)' },
+    { tag: '{{dias_numero}}', label: 'Número de días restantes' },
+    { tag: '{{importe}}', label: 'Importe de venta (ej. S/ 25.00)' },
+    { tag: '{{usuario}}', label: 'Correo o usuario' },
+    { tag: '{{contrasena}}', label: 'Contraseña de acceso' },
+    { tag: '{{perfil}}', label: 'Nombre del perfil' },
+    { tag: '{{pin}}', label: 'PIN de acceso' },
+    { tag: '{{url}}', label: 'URL de acceso' },
+    { tag: '{{extras}}', label: 'Campos adicionales' }
+  ]
+
+  // Suscripción de ejemplo para simulación de vista previa
+  const now = new Date()
+  const initialExpiry = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 5)
   const dummyRow = {
     client_name: 'Juan Pérez',
     service: 'NETFLIX PREMIUM',
-    expiry_date: new Date(Date.now() + 5 * 86400000).toISOString().split('T')[0],
+    expiry_date: toISODate(initialExpiry),
     sale_price: 25.00,
     sale_price_currency: 'PEN',
     username_email: 'juan@ejemplo.com',
@@ -19,25 +45,24 @@ export async function mountWhatsappTemplatesView(container) {
     extras: { 'Pantalla': 1 }
   }
 
-  // Load latest from DB
   async function loadData() {
-    container.innerHTML = `<div style="padding: 20px;">Cargando plantillas...</div>`
+    container.innerHTML = '<div class="empty-state">Cargando plantillas de WhatsApp...</div>'
 
     try {
       const { data, error } = await supabase.from('whatsapp_templates').select('id, content')
       if (error) throw error
 
-      const newTemplates = {}
+      const loaded = {}
       if (data) {
         data.forEach(item => {
-          newTemplates[item.id] = item.content
+          loaded[item.id] = item.content
         })
       }
-      setTemplates(newTemplates)
+      setTemplates(loaded)
       render()
     } catch (err) {
-      console.error(err)
-      container.innerHTML = `<div style="padding: 20px; color: red;">Error al cargar: ${err.message}</div>`
+      console.error('Error cargando plantillas:', err)
+      container.innerHTML = '<div class="empty-state text-danger">Error al cargar: ' + err.message + '</div>'
     }
   }
 
@@ -46,133 +71,275 @@ export async function mountWhatsappTemplatesView(container) {
       <section class="hero">
         <div>
           <h2>Plantillas de WhatsApp</h2>
-          <p>Personaliza los mensajes de WhatsApp que se envían a los clientes.</p>
+          <p>Personaliza los mensajes automatizados de cobro, accesos y actualización.</p>
+        </div>
+        <div class="templates-hero-actions">
+          <button id="btnRestoreAll" class="btn btn-ghost" type="button">
+            ${ICONS.restore} Restaurar predeterminadas
+          </button>
+          <button id="btnSaveAll" class="btn btn-primary" type="button">
+            ${ICONS.check} Guardar Cambios
+          </button>
         </div>
       </section>
 
-      <div class="grid" style="display: grid; gap: 20px; grid-template-columns: 1fr 1fr;">
-        <div class="card" style="padding: 20px;">
-          <h3>Plantilla de Recordatorio</h3>
-          <p class="text-muted" style="margin-bottom: 15px; font-size: 0.9em;">Se envía al presionar el botón "Cobrar" o "WhatsApp" en los resúmenes.</p>
-          <textarea id="tplReminder" rows="8" style="width: 100%; font-family: monospace; padding: 10px; margin-bottom: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-color); resize: vertical;"></textarea>
-          <h4>Vista previa (con datos de ejemplo):</h4>
-          <pre id="prevReminder" style="background: var(--bg-hover); padding: 15px; border-radius: 6px; white-space: pre-wrap; font-size: 0.9em; margin-bottom: 15px;"></pre>
+      <div class="templates-view">
+        <!-- Barra de Variables Disponibles Clicables -->
+        <div class="template-variables-card">
+          <div class="template-variables-header">
+            <h3 class="template-variables-title">
+              ${ICONS.messageSquare} Variables disponibles
+            </h3>
+            <span class="template-variables-help">Haz clic en una variable para insertarla en la posición del cursor</span>
+          </div>
+          <div class="template-variables-list" id="varsList">
+            ${availableVariables.map(v => `
+              <button type="button" class="template-var-tag" data-tag="${v.tag}" title="${v.label}">
+                ${v.tag}
+              </button>
+            `).join('')}
+          </div>
         </div>
 
-        <div class="card" style="padding: 20px;">
-          <h3>Plantilla de Credenciales</h3>
-          <p class="text-muted" style="margin-bottom: 15px; font-size: 0.9em;">Se envía al presionar "Enviar datos" o "Enviar WhatsApp" desde la vista de accesos.</p>
-          <textarea id="tplCredentials" rows="8" style="width: 100%; font-family: monospace; padding: 10px; margin-bottom: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-color); resize: vertical;"></textarea>
-          <h4>Vista previa (con datos de ejemplo):</h4>
-          <pre id="prevCredentials" style="background: var(--bg-hover); padding: 15px; border-radius: 6px; white-space: pre-wrap; font-size: 0.9em; margin-bottom: 15px;"></pre>
+        <!-- Barra de Simulación de Escenarios -->
+        <div class="template-sim-card">
+          <span class="template-sim-label">
+            ${ICONS.calendar} Simular fecha de vencimiento:
+          </span>
+          <div class="template-sim-buttons">
+            <button type="button" class="btn btn-small btn-ghost template-sim-btn active" data-offset="5">En 5 días</button>
+            <button type="button" class="btn btn-small btn-ghost template-sim-btn" data-offset="1">Mañana</button>
+            <button type="button" class="btn btn-small btn-ghost template-sim-btn" data-offset="0">Hoy</button>
+            <button type="button" class="btn btn-small btn-ghost template-sim-btn" data-offset="-1">Ayer</button>
+            <button type="button" class="btn btn-small btn-ghost template-sim-btn" data-offset="-3">Hace 3 días</button>
+          </div>
         </div>
 
-        <div class="card" style="padding: 20px; grid-column: 1 / -1;">
-          <h3>Plantilla de Actualización</h3>
-          <p class="text-muted" style="margin-bottom: 15px; font-size: 0.9em;">Se envía al presionar "Actualizar datos".</p>
-          <textarea id="tplUpdate" rows="8" style="width: 100%; font-family: monospace; padding: 10px; margin-bottom: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-color); resize: vertical;"></textarea>
-          <h4>Vista previa (con datos de ejemplo):</h4>
-          <pre id="prevUpdate" style="background: var(--bg-hover); padding: 15px; border-radius: 6px; white-space: pre-wrap; font-size: 0.9em; margin-bottom: 15px;"></pre>
+        <!-- Grid de Plantillas -->
+        <div class="templates-grid">
+          <!-- Plantilla 1: Recordatorio -->
+          <article class="template-card">
+            <div class="template-card-header">
+              <div>
+                <h3 class="template-card-title">Plantilla de Recordatorio</h3>
+                <p class="template-card-desc">Se envía al presionar "Cobrar" o "WhatsApp" en las tablas de suscripciones.</p>
+              </div>
+              <button type="button" class="btn btn-small btn-ghost btn-restore-single" data-tpl="reminder" title="Restaurar solo esta plantilla">
+                ${ICONS.restore}
+              </button>
+            </div>
+            <textarea id="tplReminder" class="template-textarea" rows="7" placeholder="Escribe tu mensaje..."></textarea>
+            <div class="template-preview-wrapper">
+              <span class="template-preview-label">Vista previa en vivo:</span>
+              <div id="prevReminder" class="template-preview-box"></div>
+            </div>
+          </article>
+
+          <!-- Plantilla 2: Credenciales -->
+          <article class="template-card">
+            <div class="template-card-header">
+              <div>
+                <h3 class="template-card-title">Plantilla de Credenciales</h3>
+                <p class="template-card-desc">Se envía al compartir los accesos de una cuenta con el cliente.</p>
+              </div>
+              <button type="button" class="btn btn-small btn-ghost btn-restore-single" data-tpl="credentials" title="Restaurar solo esta plantilla">
+                ${ICONS.restore}
+              </button>
+            </div>
+            <textarea id="tplCredentials" class="template-textarea" rows="7" placeholder="Escribe tu mensaje..."></textarea>
+            <div class="template-preview-wrapper">
+              <span class="template-preview-label">Vista previa en vivo:</span>
+              <div id="prevCredentials" class="template-preview-box"></div>
+            </div>
+          </article>
+
+          <!-- Plantilla 3: Actualización -->
+          <article class="template-card full-width">
+            <div class="template-card-header">
+              <div>
+                <h3 class="template-card-title">Plantilla de Actualización</h3>
+                <p class="template-card-desc">Se envía al actualizar credenciales o datos de la cuenta existente.</p>
+              </div>
+              <button type="button" class="btn btn-small btn-ghost btn-restore-single" data-tpl="update" title="Restaurar solo esta plantilla">
+                ${ICONS.restore}
+              </button>
+            </div>
+            <textarea id="tplUpdate" class="template-textarea" rows="6" placeholder="Escribe tu mensaje..."></textarea>
+            <div class="template-preview-wrapper">
+              <span class="template-preview-label">Vista previa en vivo:</span>
+              <div id="prevUpdate" class="template-preview-box"></div>
+            </div>
+          </article>
         </div>
-      </div>
 
-      <div class="card" style="padding: 20px; margin-top: 20px; display: flex; gap: 15px; align-items: center;">
-        <button id="btnSaveTemplates" class="btn btn-primary" style="padding: 10px 24px;">Guardar Cambios</button>
-        <button id="btnRestoreTemplates" class="btn btn-ghost">Restaurar Valores por Defecto</button>
-        <span id="saveStatus" style="color: var(--status-success-text); font-weight: bold; margin-left: auto;"></span>
-      </div>
-
-      <div class="card" style="padding: 20px; margin-top: 20px;">
-        <h3>Variables disponibles</h3>
-        <p class="text-muted" style="margin-bottom: 10px;">Puedes usar estas variables en tus plantillas encerrándolas en llaves dobles (ej. <code>{{cliente}}</code>). Se reemplazarán automáticamente.</p>
-        <ul style="list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px;">
-          <li><code>{{cliente}}</code> Nombre del cliente</li>
-          <li><code>{{servicio}}</code> Nombre del servicio</li>
-          <li><code>{{vencimiento}}</code> Fecha de vencimiento</li>
-          <li><code>{{dias}}</code> Días restantes</li>
-          <li><code>{{importe}}</code> Importe de venta</li>
-          <li><code>{{usuario}}</code> Correo o usuario</li>
-          <li><code>{{contrasena}}</code> Contraseña</li>
-          <li><code>{{perfil}}</code> Nombre del perfil</li>
-          <li><code>{{pin}}</code> PIN de acceso</li>
-          <li><code>{{url}}</code> URL de acceso</li>
-          <li><code>{{extras}}</code> Muestra los campos adicionales</li>
-        </ul>
+        <div class="template-bottom-actions">
+          <button id="btnBottomSave" class="btn btn-primary" type="button">
+            ${ICONS.check} Guardar Cambios
+          </button>
+          <span id="saveStatusIndicator" class="template-status-msg"></span>
+        </div>
       </div>
     `
 
-    // Import current templates from whatsapp module
-    import('../whatsapp.js').then(({ templates }) => {
-      const tplReminder = document.getElementById('tplReminder')
-      const tplCredentials = document.getElementById('tplCredentials')
-      const tplUpdate = document.getElementById('tplUpdate')
+    const tplReminder = container.querySelector('#tplReminder')
+    const tplCredentials = container.querySelector('#tplCredentials')
+    const tplUpdate = container.querySelector('#tplUpdate')
 
-      tplReminder.value = templates.reminder
-      tplCredentials.value = templates.credentials
-      tplUpdate.value = templates.update
+    const prevReminder = container.querySelector('#prevReminder')
+    const prevCredentials = container.querySelector('#prevCredentials')
+    const prevUpdate = container.querySelector('#prevUpdate')
 
-      function updatePreviews() {
-        document.getElementById('prevReminder').textContent = interpolateTemplate(tplReminder.value, dummyRow)
-        document.getElementById('prevCredentials').textContent = interpolateTemplate(tplCredentials.value, dummyRow)
-        document.getElementById('prevUpdate').textContent = interpolateTemplate(tplUpdate.value, dummyRow)
-      }
+    tplReminder.value = templates.reminder || defaultTemplates.reminder
+    tplCredentials.value = templates.credentials || defaultTemplates.credentials
+    tplUpdate.value = templates.update || defaultTemplates.update
 
-      tplReminder.addEventListener('input', updatePreviews)
-      tplCredentials.addEventListener('input', updatePreviews)
-      tplUpdate.addEventListener('input', updatePreviews)
+    function updatePreviews() {
+      prevReminder.textContent = interpolateTemplate(tplReminder.value, dummyRow)
+      prevCredentials.textContent = interpolateTemplate(tplCredentials.value, dummyRow)
+      prevUpdate.textContent = interpolateTemplate(tplUpdate.value, dummyRow)
+    }
+
+    // Seguimiento del último textarea enfocado para insertar variables
+    const trackFocus = (el) => {
+      el.addEventListener('focus', () => {
+        activeTextareaId = el.id
+      })
+    }
+    trackFocus(tplReminder)
+    trackFocus(tplCredentials)
+    trackFocus(tplUpdate)
+
+    tplReminder.addEventListener('input', updatePreviews)
+    tplCredentials.addEventListener('input', updatePreviews)
+    tplUpdate.addEventListener('input', updatePreviews)
+
+    // Clic en variables: inserta en la posición del cursor del textarea activo
+    container.querySelector('#varsList').addEventListener('click', (e) => {
+      const btn = e.target.closest('.template-var-tag')
+      if (!btn) return
+      const tag = btn.dataset.tag
+      if (!tag) return
+
+      const activeTextarea = container.querySelector(`#${activeTextareaId}`) || tplReminder
+      const start = activeTextarea.selectionStart ?? activeTextarea.value.length
+      const end = activeTextarea.selectionEnd ?? activeTextarea.value.length
+      const val = activeTextarea.value
+
+      activeTextarea.value = val.substring(0, start) + tag + val.substring(end)
+      activeTextarea.focus()
+      activeTextarea.setSelectionRange(start + tag.length, start + tag.length)
 
       updatePreviews()
+    })
 
-      document.getElementById('btnRestoreTemplates').addEventListener('click', () => {
-        if (!confirm('¿Estás seguro de restaurar las plantillas por defecto? Perderás tus cambios no guardados.')) return
-        tplReminder.value = defaultTemplates.reminder
-        tplCredentials.value = defaultTemplates.credentials
-        tplUpdate.value = defaultTemplates.update
+    // Simulación de situaciones de vencimiento
+    container.querySelectorAll('.template-sim-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        container.querySelectorAll('.template-sim-btn').forEach(b => b.classList.remove('active'))
+        btn.classList.add('active')
+        const offset = parseInt(btn.dataset.offset, 10)
+        const target = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset)
+        dummyRow.expiry_date = toISODate(target)
         updatePreviews()
       })
+    })
 
-      document.getElementById('btnSaveTemplates').addEventListener('click', async () => {
-        if (isSaving) return
-        isSaving = true
+    // Restaurar individual
+    container.querySelectorAll('.btn-restore-single').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const tplKey = btn.dataset.tpl
+        const defaultVal = defaultTemplates[tplKey]
+        if (!defaultVal) return
 
-        const btn = document.getElementById('btnSaveTemplates')
-        const status = document.getElementById('saveStatus')
+        const confirmed = await confirmDialog({
+          title: '¿Restaurar plantilla predeterminada?',
+          message: 'Se reemplazará el texto actual de esta plantilla por su formato original predeterminado.',
+          confirmText: 'Restaurar',
+          cancelText: 'Cancelar'
+        })
 
-        btn.textContent = 'Guardando...'
-        status.textContent = ''
+        if (!confirmed) return
 
-        try {
-          const updates = [
-            { id: 'reminder', content: tplReminder.value },
-            { id: 'credentials', content: tplCredentials.value },
-            { id: 'update', content: tplUpdate.value }
-          ]
-
-          const { error } = await supabase.from('whatsapp_templates').upsert(updates)
-
-          if (error) throw error
-
-          // Update local state
-          setTemplates({
-            reminder: tplReminder.value,
-            credentials: tplCredentials.value,
-            update: tplUpdate.value
-          })
-
-          status.textContent = '¡Cambios guardados con éxito!'
-          setTimeout(() => {
-            if (status) status.textContent = ''
-          }, 3000)
-
-        } catch (err) {
-          console.error(err)
-          alert('Error al guardar: ' + err.message)
-        } finally {
-          isSaving = false
-          btn.textContent = 'Guardar Cambios'
-        }
+        if (tplKey === 'reminder') tplReminder.value = defaultVal
+        if (tplKey === 'credentials') tplCredentials.value = defaultVal
+        if (tplKey === 'update') tplUpdate.value = defaultVal
+        updatePreviews()
+        toast('Plantilla restaurada a valor predeterminado.', 'ok')
       })
     })
+
+    // Restaurar todas
+    container.querySelector('#btnRestoreAll').addEventListener('click', async () => {
+      const confirmed = await confirmDialog({
+        title: '¿Restaurar todas las plantillas?',
+        message: 'Se descartarán las modificaciones actuales y se volverá a la configuración predeterminada en las 3 plantillas.',
+        confirmText: 'Restaurar todas',
+        cancelText: 'Cancelar',
+        danger: true
+      })
+
+      if (!confirmed) return
+
+      tplReminder.value = defaultTemplates.reminder
+      tplCredentials.value = defaultTemplates.credentials
+      tplUpdate.value = defaultTemplates.update
+      updatePreviews()
+      toast('Todas las plantillas fueron restauradas a sus valores predeterminados.', 'ok')
+    })
+
+    // Guardar cambios
+    async function handleSave() {
+      if (isSaving) return
+      isSaving = true
+
+      const saveBtns = [container.querySelector('#btnSaveAll'), container.querySelector('#btnBottomSave')].filter(Boolean)
+      const statusEl = container.querySelector('#saveStatusIndicator')
+
+      saveBtns.forEach(b => {
+        b.disabled = true
+        b.innerHTML = `${ICONS.refresh} Guardando...`
+      })
+      if (statusEl) statusEl.textContent = ''
+
+      try {
+        const updates = [
+          { id: 'reminder', content: tplReminder.value },
+          { id: 'credentials', content: tplCredentials.value },
+          { id: 'update', content: tplUpdate.value }
+        ]
+
+        const { error } = await supabase.from('whatsapp_templates').upsert(updates)
+        if (error) throw error
+
+        setTemplates({
+          reminder: tplReminder.value,
+          credentials: tplCredentials.value,
+          update: tplUpdate.value
+        })
+
+        toast('Plantillas de WhatsApp guardadas con éxito.', 'ok')
+        if (statusEl) {
+          statusEl.textContent = '¡Cambios guardados con éxito!'
+          setTimeout(() => {
+            if (statusEl) statusEl.textContent = ''
+          }, 3500)
+        }
+      } catch (err) {
+        console.error('Error guardando plantillas:', err)
+        toast('Error al guardar: ' + err.message, 'error')
+      } finally {
+        isSaving = false
+        saveBtns.forEach(b => {
+          b.disabled = false
+          b.innerHTML = `${ICONS.check} Guardar Cambios`
+        })
+      }
+    }
+
+    container.querySelector('#btnSaveAll').addEventListener('click', handleSave)
+    container.querySelector('#btnBottomSave')?.addEventListener('click', handleSave)
+
+    updatePreviews()
   }
 
   await loadData()
