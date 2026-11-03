@@ -76,7 +76,9 @@ export function openModal({
     bodyEl.appendChild(body)
   }
 
-  card.appendChild(head)
+  if (title || subtitle || showCloseBtn) {
+    card.appendChild(head)
+  }
   card.appendChild(bodyEl)
 
   if (footer) {

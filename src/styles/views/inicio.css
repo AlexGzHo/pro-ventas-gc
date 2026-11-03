@@ -61,14 +61,23 @@ PRO VENTAS GC — Vista Inicio
 }
 .inicio-attention-card:hover { background: var(--bg-card-hover); border-color: var(--border-strong); }
 
-.inicio-attention-info { display: flex; flex-direction: column; gap: 4px; }
+.inicio-attention-info { display: flex; flex-direction: column; gap: 6px; }
+.inicio-attention-title-line { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .inicio-attention-client { font-size: 14px; font-weight: 650; color: var(--text-primary); }
 .inicio-attention-meta {
   display: flex;
   align-items: center;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 8px 12px;
   font-size: 12px;
   color: var(--text-muted);
+}
+.inicio-attention-phone,
+.inicio-attention-expiry {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
 }
 .inicio-attention-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 

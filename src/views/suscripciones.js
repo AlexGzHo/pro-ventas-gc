@@ -589,6 +589,9 @@ export function cardHtml(row) {
               ${ICONS.moreHorizontal}
             </button>
             <div class="card-dropdown hidden" role="menu">
+              <button type="button" class="card-dropdown-item view-credentials" role="menuitem">
+                <span class="dropdown-item-icon">${ICONS.key}</span> Ver accesos
+              </button>
               <button type="button" class="card-dropdown-item whatsapp-data" role="menuitem">
                 <span class="dropdown-item-icon">${ICONS.messageSquare}</span> Enviar datos
               </button>
@@ -624,6 +627,7 @@ export function bindCardEvents() {
 
     card.querySelector('.whatsapp-reminder')?.addEventListener('click', () => safeWhatsapp(row, reminderText(row)))
     card.querySelector('.whatsapp-update')?.addEventListener('click', () => safeWhatsapp(row, updateText(row)))
+    card.querySelector('.view-credentials')?.addEventListener('click', () => openCredentialsModal(row))
     card.querySelector('.whatsapp-data')?.addEventListener('click', () => safeWhatsapp(row, credentialsText(row)))
     card.querySelector('.renew')?.addEventListener('click', () => openRenewModal(row))
     card.querySelector('.edit')?.addEventListener('click', () => openSubscriptionForm(row))
@@ -736,13 +740,13 @@ export function summaryRowHtml(row) {
       </td>
       <td data-label="Acciones">
         <div class="summary-actions-cell">
-          <button type="button" class="btn btn-small btn-action-cobrar btn-whatsapp-renew" data-id="${row.id}" title="Cobrar por WhatsApp" aria-label="Cobrar por WhatsApp">
-            <span class="cobrar-icon">${ICONS.whatsapp}</span>
-            <span>Cobrar</span>
-          </button>
           <button type="button" class="btn btn-small btn-action-renovar renew-modal-btn" data-id="${row.id}" title="Extender período" aria-label="Extender período">
             ${ICONS.calendar}
             <span>Renovar</span>
+          </button>
+          <button type="button" class="btn btn-small btn-action-cobrar btn-whatsapp-renew" data-id="${row.id}" title="Cobrar por WhatsApp" aria-label="Cobrar por WhatsApp">
+            <span class="cobrar-icon">${ICONS.whatsapp}</span>
+            <span>Cobrar</span>
           </button>
           <button type="button" class="btn btn-small btn-action-copy creds-modal-btn" data-id="${row.id}" title="Ver accesos y credenciales" aria-label="Ver accesos">
             ${ICONS.key}
