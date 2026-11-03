@@ -635,3 +635,13 @@ Modal de Datos de Acceso (Credenciales)
   font-weight: 600;
   width: 100%;
 }
+
+.creds-footer-btn {
+  white-space: nowrap;
+}
+@media (max-width: 640px) {
+  .creds-modal-footer {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}

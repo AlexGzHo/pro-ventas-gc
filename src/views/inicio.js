@@ -431,11 +431,12 @@ export function renderInicioHtml(rows = []) {
         <details class="inicio-financial-details">
           <summary class="inicio-financial-summary">
             <div class="financial-summary-header">
-              <div class="financial-summary-title">
+              <div class="financial-summary-title-row">
+                <span class="financial-summary-chevron">${ICONS.chevronRight}</span>
                 <span class="financial-summary-icon">${ICONS.trendingUp}</span>
-                <span>Detalle Financiero y Comparativo Mensual</span>
+                <span class="financial-summary-title">Detalle Financiero y Comparativo Mensual</span>
               </div>
-              <span class="financial-summary-badge">Filtros y comparativa</span>
+              <span class="financial-summary-sub">Filtros y comparativa</span>
             </div>
           </summary>
 
