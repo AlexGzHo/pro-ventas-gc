@@ -1,8 +1,9 @@
 // Utilidades compartidas de los verificadores. Sin dependencias externas.
 import { readFileSync, readdirSync, statSync } from 'node:fs'
-import { join, relative } from 'node:path'
+import { join, relative, dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-export const ROOT = new URL('../../', import.meta.url).pathname
+export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../')
 
 export function listFiles(dir, exts) {
   const out = []

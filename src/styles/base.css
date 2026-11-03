@@ -9,7 +9,7 @@ body {
   background: var(--bg-canvas);
   color: var(--text-secondary);
   font-family: inherit;
-  font-size: var(--fs-body, 14.5px);
+  font-size: var(--text-md, 14px);
   line-height: 1.5;
 }
 button, input, select, textarea { font: inherit; color-scheme: inherit; }
@@ -52,7 +52,7 @@ Typography
 ========================================================================== */
 h1, h2, h3, h4, h5, h6 { color: var(--text-primary); margin-top: 0; }
 p { margin-top: 0; margin-bottom: 0.75rem; }
-small { font-size: var(--fs-small, 11.5px); }
+small { font-size: var(--text-xs, 12px); }
 code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.9em;
@@ -72,9 +72,9 @@ Buttons
   border: 1px solid var(--border-subtle);
   background: var(--bg-surface-elevated);
   color: var(--text-secondary);
-  border-radius: var(--radius-buttons);
+  border-radius: var(--radius-control);
   padding: 7px 12px;
-  font-size: 13px;
+  font-size: var(--text-sm, 13px);
   font-weight: 550;
   letter-spacing: -0.01em;
   transition: all 0.15s ease;
@@ -85,6 +85,8 @@ Buttons
 .btn:disabled { opacity: 0.6; cursor: not-allowed; pointer-events: none; }
 .btn-primary { background: var(--color-brand); border-color: var(--color-brand); color: #ffffff; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35); }
 .btn-primary:hover { background: var(--color-brand-hover); border-color: var(--color-brand-hover); color: #ffffff; }
+.btn-secondary { background: var(--bg-surface-elevated); border-color: var(--border-subtle); color: var(--text-primary); }
+.btn-secondary:hover { background: var(--bg-card-hover); border-color: var(--border-strong); }
 .btn-outline { background: transparent; border-color: var(--border-strong); color: var(--text-primary); }
 .btn-outline:hover { background: var(--bg-surface-elevated); border-color: var(--color-brand); }
 .btn-danger { color: var(--status-danger-text); border-color: var(--status-danger-border); background: var(--status-danger-bg); }
@@ -92,12 +94,12 @@ Buttons
 .btn-ghost { background: transparent; border-color: transparent; color: var(--text-muted); }
 .btn-ghost:hover { background: var(--bg-hover-ghost); color: var(--text-primary); border-color: var(--border-subtle); }
 .btn-full { width: 100%; }
-.btn-small { padding: 5px 9px; font-size: 12px; border-radius: 5px; }
+.btn-small { padding: 5px 9px; font-size: var(--text-xs, 12px); border-radius: var(--radius-xs); }
 .link-btn {
   background: transparent;
   border: none;
   color: #60a5fa;
-  font-size: 12px;
+  font-size: var(--text-xs, 12px);
   font-weight: 600;
   padding: 4px 0;
   cursor: pointer;
@@ -107,7 +109,7 @@ Buttons
 /* ==========================================================================
 Inputs & Forms
 ========================================================================== */
-label { display: block; font-size: var(--fs-label, 14px); color: var(--text-secondary); margin-bottom: 4px; }
+label { display: block; font-size: var(--text-sm, 13px); color: var(--text-secondary); margin-bottom: 4px; }
 input[type="text"],
 input[type="email"],
 input[type="password"],
@@ -122,7 +124,7 @@ textarea,
   padding: 8px 12px;
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-inputs);
+  border-radius: var(--radius-control);
   color: var(--text-primary);
   font-size: 13.5px;
   outline: none;
@@ -161,7 +163,7 @@ Badges
   font-size: 11.5px;
   font-weight: 600;
   padding: 3px 8px;
-  border-radius: var(--radius-badges);
+  border-radius: var(--radius-control);
   border: 1px solid transparent;
   white-space: nowrap;
 }
@@ -200,14 +202,23 @@ Badges
   to { transform: rotate(360deg); }
 }
 
+/* ==========================================================================
+Utilities
+========================================================================== */
+.text-danger { color: var(--status-danger-text) !important; }
+.text-muted { color: var(--text-muted) !important; }
+.text-primary { color: var(--text-primary) !important; }
+.text-right { text-align: right; }
+.font-bold { font-weight: 700; }
+.justify-end { justify-content: flex-end; }
+
 @media (max-width: 640px) {
   .btn {
-    min-height: 44px;
+    min-height: var(--control-height-mobile, 44px);
     padding: 10px 14px;
   }
   .btn-small {
-    min-height: 44px;
+    min-height: var(--control-height-mobile, 44px);
     padding: 8px 12px;
   }
 }
-

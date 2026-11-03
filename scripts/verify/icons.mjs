@@ -1,8 +1,11 @@
 // Verifica que toda referencia ICONS.nombre exista en src/ui/icons.js (evita "undefined" en pantalla).
+import { join, resolve } from 'node:path'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { listFiles, read, rel, report, ROOT } from './lib.mjs'
 
 export async function run() {
-  const { ICONS } = await import(`${ROOT}src/ui/icons.js`)
+  const iconPath = pathToFileURL(join(ROOT, 'src/ui/icons.js')).href
+  const { ICONS } = await import(iconPath)
   const problems = []
   for (const file of listFiles('src', ['.js'])) {
     read(file).split('\n').forEach((text, i) => {
@@ -15,4 +18,4 @@ export async function run() {
   return report('Iconos existentes', problems)
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) process.exit((await run()) ? 0 : 1)
+if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) process.exit((await run()) ? 0 : 1)

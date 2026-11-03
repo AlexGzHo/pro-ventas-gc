@@ -345,6 +345,182 @@ Login Shell
 }
 .login-copy p { margin: 0; color: var(--text-muted); line-height: 1.45; font-size: 13px; }
 .auth-links-row { display: flex; justify-content: flex-end; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-control);
+  display: grid;
+  place-items: center;
+  font-weight: 850;
+  font-size: var(--text-sm);
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, var(--color-brand) 0%, #4f46e5 100%);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+}
+.brand h1 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+.brand p {
+  margin: 2px 0 0;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  line-height: 1;
+}
+.config-box {
+  margin-top: 14px;
+  padding: 11px 13px;
+  border-radius: var(--radius-control);
+  font-size: 12.5px;
+  line-height: 1.45;
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(37, 99, 235, 0.25);
+  color: #bfdbfe;
+  font-family: var(--font-mono);
+}
+/* ==========================================================================
+Page Headers & Toolbars (Hero, Toolbar, Filter Controls, Results Bar)
+========================================================================== */
+.hero, .page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.hero h2, .page-header h2 {
+  margin: 0;
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+.hero p, .page-header p {
+  margin: 4px 0 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.toolbar .search-box {
+  flex: 1;
+  min-width: 220px;
+}
+.filter-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.filter-select {
+  width: auto;
+  min-width: 140px;
+  height: var(--control-height-desktop);
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  color: var(--text-primary);
+  padding: 0 12px;
+  font-size: var(--text-sm);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.filter-select:hover {
+  border-color: var(--border-strong);
+}
+.filter-select:focus {
+  outline: none;
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 2px var(--color-brand-ring);
+}
+.results-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+.results-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+/* ==========================================================================
+KPI Card Components & Trends
+========================================================================== */
+.kpi-icon-wrap {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-control);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--bg-surface-elevated);
+  color: var(--text-secondary);
+}
+.kpi-icon-primary { background: rgba(37, 99, 235, 0.12); color: var(--color-brand); border: 1px solid rgba(37, 99, 235, 0.25); }
+.kpi-icon-warning { background: var(--status-warning-bg); color: var(--status-warning-text); border: 1px solid var(--status-warning-border); }
+.kpi-icon-soon { background: rgba(245, 158, 11, 0.08); color: #fde047; border: 1px solid rgba(245, 158, 11, 0.2); }
+.kpi-icon-danger { background: var(--status-danger-bg); color: var(--status-danger-text); border: 1px solid var(--status-danger-border); }
+.kpi-icon-success { background: var(--status-success-bg); color: var(--status-success-text); border: 1px solid var(--status-success-border); }
+.kpi-icon-neutral { background: var(--status-neutral-bg); color: var(--status-neutral-text); border: 1px solid var(--status-neutral-border); }
+.kpi-icon-accent { background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.25); }
+
+.kpi-subtext {
+  font-size: var(--text-xs, 12px);
+  color: var(--text-dim);
+  margin-top: 4px;
+  line-height: 1.3;
+}
+.kpi-currency-pill {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-surface-elevated);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+  display: inline-block;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.kpi-trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: var(--radius-pill);
+  margin-top: 4px;
+}
+.trend-up {
+  background: var(--status-success-bg);
+  color: var(--status-success-text);
+}
+.trend-neutral {
+  background: var(--bg-surface-elevated);
+  color: var(--text-muted);
+}
+/* Merge dialog utilities */
+.merge-banner-text { flex: 1; min-width: 0; }
+.merge-field-wrap { margin-top: 12px; }
 /* ==========================================================================
 Search Box Component (Contrato Compartido)
 ========================================================================== */
@@ -412,6 +588,35 @@ Search Box Component (Contrato Compartido)
 }
 
 @media (max-width: 640px) {
+  .hero, .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .hero .btn, .page-header .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .filter-controls {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+  }
+  .filter-select {
+    width: 100%;
+    min-width: 0;
+  }
+  .results-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
   .toast-area {
     left: 12px;
     right: 12px;

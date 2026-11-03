@@ -1,4 +1,63 @@
-# Clases que solo sirven como ganchos para JavaScript (selectores de querySelector) y no necesitan estilos.
-# Una por línea. Explica con un comentario qué las usa. El verificador de clases ignora las listadas aquí.
-# Ejemplo:
-# btn-edit-client   # src/views/clientes.js: abre el panel de edición
+# Clases que solo sirven como ganchos para JavaScript (selectores de querySelector / event delegation / estado) y no necesitan estilos CSS directos.
+# Una por línea con comentario explicativo.
+
+# Shell
+bottom-nav-btn           # src/shell.js: selector para navegación móvil inferior
+drawer-locked            # src/shell.js: clase de estado cuando el drawer lateral está fijado
+
+# Suscripciones - Event delegation y acciones en tarjetas / tabla
+renew                    # src/views/suscripciones.js: acción renovar en tarjetas
+cobrar-icon              # src/views/suscripciones.js: gancho de icono en botón cobrar
+copy-all                 # src/views/suscripciones.js: botón copiar accesos/credenciales
+copy-btn-text            # src/views/suscripciones.js: nodo de texto del botón copiar para feedback
+view-credentials         # src/views/suscripciones.js: opción ver credenciales en menú ⋯
+whatsapp-data            # src/views/suscripciones.js: opción enviar datos WhatsApp en menú ⋯
+whatsapp-reminder        # src/views/suscripciones.js: opción recordatorio WhatsApp en menú ⋯
+whatsapp-update          # src/views/suscripciones.js: opción actualización WhatsApp en menú ⋯
+edit                     # src/views/suscripciones.js: opción editar en menú ⋯
+delete-hard              # src/views/suscripciones.js: opción eliminar permanente en menú ⋯
+current                  # src/views/suscripciones.js: indicador de filtro activo en vista rápida
+quick-view-label         # src/views/suscripciones.js: etiqueta de conteo en vista rápida
+subs-filters-icon        # src/views/suscripciones.js: icono del botón de filtros
+summary-date-val         # src/views/suscripciones.js: nodo de fecha en fila resumen
+renew-modal-btn          # src/views/suscripciones.js: botón renovar en modal/resumen
+btn-whatsapp-renew       # src/views/suscripciones.js: botón avisar WhatsApp tras renovar
+creds-modal-btn          # src/views/suscripciones.js: botón accesos en fila resumen
+edit-modal-btn           # src/views/suscripciones.js: botón editar en fila resumen
+
+# Inicio - Event delegation
+btn-action-cobrar        # src/views/inicio.js: botón cobrar en tarjetas de atención
+btn-action-copy-inicio   # src/views/inicio.js: botón copiar accesos en tarjetas de atención
+btn-action-renovar       # src/views/inicio.js: botón renovar en tarjetas de atención
+btn-view-sub             # src/views/inicio.js y clientes.js: botón ver suscripción / navegar
+
+# Clientes - Event delegation y contenedores
+btn-edit-client          # src/views/clientes.js: botón editar cliente
+btn-delete-client        # src/views/clientes.js: botón eliminar cliente
+btn-merge-client         # src/views/clientes.js: botón fusionar cliente
+client-subs-section      # src/views/clientes.js: contenedor de suscripciones del cliente
+
+# Productos / Catálogo - Event delegation y filtros
+btn-edit-product         # src/views/productos.js: botón editar producto
+btn-delete-product       # src/views/productos.js: botón eliminar producto
+filter-active            # src/views/productos.js: indicador de chip de filtro activo
+
+# Proveedores - Event delegation
+btn-edit-prov            # src/views/proveedores.js: botón editar proveedor
+btn-delete-prov          # src/views/proveedores.js: botón eliminar proveedor
+btn-merge-prov           # src/views/proveedores.js: botón fusionar proveedor
+
+# Plantillas WhatsApp
+btn-restore-single       # src/views/whatsappTemplates.js: botón restaurar plantilla individual
+
+# Modales de confirmación y credenciales
+confirm-cancel-btn       # src/ui/confirm.js: botón cancelar en confirmDialog
+copy-modal-field         # src/features/subscriptionActions.js: botón copiar campo específico
+toggle-password-visibility # src/features/subscriptionActions.js: botón mostrar/ocultar contraseña
+cred-masked              # src/features/subscriptionActions.js: estado enmascarado de contraseña
+credentials              # src/features/subscriptionActions.js: contenedor de bloque de credenciales
+
+# Formulario de suscripción
+is-invalid               # src/features/subscriptionForm.js: clase de validación en inputs
+state-pen                # src/features/subscriptionForm/financialBlock.js: indicador de estado PEN
+state-usdt               # src/features/subscriptionForm/financialBlock.js: indicador de estado USDT
