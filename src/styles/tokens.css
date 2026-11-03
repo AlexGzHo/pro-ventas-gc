@@ -56,8 +56,7 @@ Tokens: Geometry, Spacing Scale (4/8/12/16/24/32), Typography, Status Colors, Sh
 /* ==========================================================================
 Tema Oscuro (Midnight Precision Instrument) — Default
 ========================================================================== */
-:root,
-[data-theme="dark"] {
+:root {
   color-scheme: dark;
   /* Superficies */
   --bg-canvas: #080b11;

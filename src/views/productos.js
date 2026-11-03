@@ -4,25 +4,23 @@ import { toast } from '../ui/toast.js'
 import { confirmDialog } from '../ui/confirm.js'
 import { openModal } from '../ui/modal.js'
 import { ICONS } from '../ui/icons.js'
-import { PRODUCT_CATEGORIES } from '../constants.js'
 
 /**
  * PRO VENTAS GC — Catálogo de Productos
- * Grid compacto con vista previa de logo, precio base, categoría y estado activo/inactivo.
+ * Grid compacto con vista previa de logo, precio base y estado activo/inactivo.
  * Creación y edición 100% en ui/modal estándar sin romper el layout.
  */
 export async function mountProductosView(container, options = {}) {
   let productsData = options.products || []
   let providersData = options.providers || []
   let searchTerm = ''
-  let selectedCategory = 'TODAS'
   let selectedStatus = 'TODOS'
 
   container.innerHTML = `
     <section class="hero">
       <div>
         <h2>Catálogo de Productos</h2>
-        <p>Servicios, precios base sugeridos, categorías y proveedores.</p>
+        <p>Servicios, precios base sugeridos y proveedores.</p>
       </div>
       <button id="btnNewProduct" class="btn btn-primary" type="button">
         ${ICONS.plus} Nuevo producto
@@ -38,11 +36,6 @@ export async function mountProductosView(container, options = {}) {
         </div>
 
         <div class="filter-controls">
-          <select id="categoryFilter" class="filter-select" title="Filtrar por categoría">
-            <option value="TODAS">Categoría: Todas</option>
-            ${PRODUCT_CATEGORIES.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('')}
-          </select>
-
           <select id="statusFilter" class="filter-select" title="Filtrar por estado">
             <option value="TODOS">Estado: Todos</option>
             <option value="ACTIVE">Solo Activos</option>
@@ -62,7 +55,6 @@ export async function mountProductosView(container, options = {}) {
   const gridEl = container.querySelector('#productosGrid')
   const searchInput = container.querySelector('#productSearch')
   const searchClearBtn = container.querySelector('#productSearchClear')
-  const categoryFilterEl = container.querySelector('#categoryFilter')
   const statusFilterEl = container.querySelector('#statusFilter')
   const resultsLineEl = container.querySelector('#catalogResultsLine')
   const btnNewProduct = container.querySelector('#btnNewProduct')
@@ -110,16 +102,6 @@ export async function mountProductosView(container, options = {}) {
     }
   }
 
-  function getCategoryBadgeClass(cat) {
-    const c = (cat || '').toLowerCase()
-    if (c.includes('entretenimiento')) return 'badge-cat-entretenimiento'
-    if (c.includes('ia') || c.includes('productividad')) return 'badge-cat-ia'
-    if (c.includes('diseño') || c.includes('diseno')) return 'badge-cat-diseno'
-    if (c.includes('educación') || c.includes('educacion')) return 'badge-cat-educacion'
-    if (c.includes('almacenamiento')) return 'badge-cat-almacenamiento'
-    return 'badge-cat-otros'
-  }
-
   function calculateMargin(cost, sale) {
     const c = Number(cost) || 0
     const s = Number(sale) || 0
@@ -134,20 +116,18 @@ export async function mountProductosView(container, options = {}) {
       const matchSearch = !q ||
         (p.name || '').toLowerCase().includes(q) ||
         (p.description || '').toLowerCase().includes(q)
-      const pCat = p.category || 'Otros'
-      const matchCat = selectedCategory === 'TODAS' || pCat === selectedCategory
       const matchStatus = selectedStatus === 'TODOS' || (selectedStatus === 'ACTIVE' ? p.active : !p.active)
-      return matchSearch && matchCat && matchStatus
+      return matchSearch && matchStatus
     })
 
     const count = filtered.length
-    resultsLineEl.textContent = `${count} ${count === 1 ? 'producto' : 'productos'}${selectedCategory !== 'TODAS' || selectedStatus !== 'TODOS' || q ? ' (filtrados)' : ''}`
+    resultsLineEl.textContent = `${count} ${count === 1 ? 'producto' : 'productos'}${selectedStatus !== 'TODOS' || q ? ' (filtrados)' : ''}`
 
     if (filtered.length === 0) {
       gridEl.innerHTML = `
         <div class="empty-state">
           <strong>No se encontraron productos</strong>
-          <span>Intenta modificar los filtros de búsqueda o categoría.</span>
+          <span>Intenta modificar los filtros de búsqueda o estado.</span>
         </div>
       `
       return
@@ -169,9 +149,6 @@ export async function mountProductosView(container, options = {}) {
             ${logoEl}
             <div class="product-card-header-info">
               <h3 class="product-card-title" title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</h3>
-              <span class="badge ${getCategoryBadgeClass(p.category)} product-card-category">
-                ${escapeHtml(p.category || 'Otros')}
-              </span>
             </div>
           </div>
 
@@ -236,30 +213,17 @@ export async function mountProductosView(container, options = {}) {
         <input type="text" id="prodNameInput" required class="form-control" value="${escapeHtml(product?.name || '')}" placeholder="Ej. NETFLIX PREMIUM" />
       </label>
 
-      <div class="product-modal-grid-2">
-        <label>
-          Categoría
-          <select id="prodCategorySelect" class="form-control">
-            ${PRODUCT_CATEGORIES.map(cat => `
-              <option value="${escapeHtml(cat)}" ${(product?.category || 'Otros') === cat ? 'selected' : ''}>
-                ${escapeHtml(cat)}
-              </option>
-            `).join('')}
-          </select>
-        </label>
-
-        <label>
-          Proveedor predeterminado
-          <select id="prodProviderSelect" class="form-control">
-            <option value="" ${!product?.provider_id ? 'selected' : ''}>(Sin proveedor)</option>
-            ${providersData.map(prov => `
-              <option value="${prov.id}" ${product?.provider_id === prov.id ? 'selected' : ''}>
-                ${escapeHtml(prov.name)}
-              </option>
-            `).join('')}
-          </select>
-        </label>
-      </div>
+      <label>
+        Proveedor predeterminado
+        <select id="prodProviderSelect" class="form-control">
+          <option value="" ${!product?.provider_id ? 'selected' : ''}>(Sin proveedor)</option>
+          ${providersData.map(prov => `
+            <option value="${prov.id}" ${product?.provider_id === prov.id ? 'selected' : ''}>
+              ${escapeHtml(prov.name)}
+            </option>
+          `).join('')}
+        </select>
+      </label>
 
       <div class="product-modal-grid-3">
         <label>
@@ -376,7 +340,6 @@ export async function mountProductosView(container, options = {}) {
 
       const payload = {
         name,
-        category: bodyEl.querySelector('#prodCategorySelect').value || 'Otros',
         provider_id: bodyEl.querySelector('#prodProviderSelect').value || null,
         sale_price,
         default_cost,
@@ -525,12 +488,6 @@ export async function mountProductosView(container, options = {}) {
     searchTerm = ''
     searchClearBtn.classList.add('hidden')
     searchInput.focus()
-    renderList()
-  })
-
-  categoryFilterEl.addEventListener('change', (e) => {
-    selectedCategory = e.target.value
-    categoryFilterEl.classList.toggle('filter-active', selectedCategory !== 'TODAS')
     renderList()
   })
 

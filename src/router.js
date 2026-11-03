@@ -19,7 +19,7 @@ import { mountClientesView } from './views/clientes.js'
 import { mountProductosView } from './views/productos.js'
 import { mountProveedoresView } from './views/proveedores.js'
 import { mountWhatsappTemplatesView } from './views/whatsappTemplates.js'
-import { mountSubscriptionFormView } from './views/subscriptionForm.js'
+import { mountSubscriptionForm as mountSubscriptionFormView } from './features/subscriptionForm.js'
 
 export const ROUTES = {
   inicio: {
