@@ -446,7 +446,7 @@ PRO VENTAS GC — Vista Suscripciones (Fase 2-A)
 0% { box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.55); }
 70% { box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25); }
 100% { box-shadow: var(--shadow-card); }
-.card-highlight-active { border-color: var(--color-brand) !important; box-shadow: 0 0 0 3px var(--color-brand-ring, rgba(37, 99, 235, 0.45)), var(--shadow-card-hover) !important; animation: cardPulse 2s ease forwards; }
+}
 /* Vista Resumen (Tabla) */
 .summary-view-wrapper { width: 100%; }
 .summary-table-container {
@@ -589,6 +589,4 @@ PRO VENTAS GC — Vista Suscripciones (Fase 2-A)
 .card-actions-primary .btn { min-height: 40px; padding: 0 8px; font-size: 12px; justify-content: center; }
 .card-menu-btn { width: 100%; min-height: 40px; }
 .card-dropdown { right: 0; left: 0; width: 100%; }
-.card-dropdown { right: 0; left: 0; width: 100%; }
-}
 }

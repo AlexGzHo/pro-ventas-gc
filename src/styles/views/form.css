@@ -531,5 +531,4 @@ Responsive (móvil 360px y escritorio)
 /* Padding inferior adicional para evitar que el contenido quede oculto tras el footer fijo */
 .sub-form-container,
 .sub-form-modal .modal-body { padding-bottom: 74px; }
-.sub-form-modal .modal-body { padding-bottom: 74px; }
 }

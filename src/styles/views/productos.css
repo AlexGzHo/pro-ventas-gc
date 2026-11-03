@@ -126,5 +126,4 @@ PRO VENTAS GC — Vista Productos (Catálogo)
 .products-grid { grid-template-columns: 1fr; }
 .product-modal-grid-2,
 .product-modal-grid-3 { grid-template-columns: 1fr; }
-.product-modal-grid-3 { grid-template-columns: 1fr; }
 }

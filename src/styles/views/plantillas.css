@@ -141,5 +141,4 @@ PRO VENTAS GC — Vista Plantillas WhatsApp
 .templates-grid { grid-template-columns: 1fr; }
 .template-card.full-width { grid-column: auto; }
 .templates-hero-actions { width: 100%; justify-content: flex-start; }
-.templates-hero-actions { width: 100%; justify-content: flex-start; }
 }

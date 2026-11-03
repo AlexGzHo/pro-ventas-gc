@@ -74,12 +74,10 @@ PRO VENTAS GC — Vista Inicio
 
 @media (max-width: 1024px) {
 .inicio-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.inicio-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 
 @media (max-width: 640px) {
 .inicio-kpi-grid { grid-template-columns: 1fr; }
 .inicio-attention-card { flex-direction: column; align-items: stretch; }
 .inicio-attention-actions { justify-content: flex-end; }
-.inicio-attention-actions { justify-content: flex-end; }
-}
 }

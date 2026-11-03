@@ -22,5 +22,4 @@ PRO VENTAS GC — Vista Proveedores
 
 @media (max-width: 768px) {
 .provider-form-row { grid-template-columns: 1fr; }
-.provider-form-row { grid-template-columns: 1fr; }
 }
