@@ -1,0 +1,4 @@
+# Clases que solo sirven como ganchos para JavaScript (selectores de querySelector) y no necesitan estilos.
+# Una por línea. Explica con un comentario qué las usa. El verificador de clases ignora las listadas aquí.
+# Ejemplo:
+# btn-edit-client   # src/views/clientes.js: abre el panel de edición
