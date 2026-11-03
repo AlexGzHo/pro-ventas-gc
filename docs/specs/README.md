@@ -7,7 +7,9 @@
 | `../../AGENTS.md` | Cómo debe trabajar cualquier agente (plan, verificación, seguridad, reporte). |
 | `../../.agent/rules/`, `../../.agent/workflows/` | Reglas y comandos (`/implementar-lote`, `/verificar`, `/migracion-segura`) que Antigravity carga solo. |
 | `../../scripts/verify/` | Verificadores automáticos (`npm run verify`, `npm run check`). |
-| `../../supabase/tests/rls_multirevendedor.sql` | Las 15 pruebas de aislamiento que deben pasar en staging. |
+| `../../supabase/drafts/v8_multi_revendedor.sql` | Migración de referencia de la Spec 02, **validada en local** (no aplicar tal cual). |
+| `../../supabase/tests/rls_multirevendedor.sql` | Las 19 pruebas de aislamiento que deben pasar en staging. |
+| `../../supabase/tests/local/` | PostgreSQL local que reproduce el proyecto: `run.sh` (validación) y `mutate.sh` (pruebas de mutación). |
 
 ## Fases
 
@@ -15,7 +17,7 @@
 |---|---|---|---|
 | A | Lote B0 de la Spec 01: restaurar CSS perdido y unificar tokens/componentes. Dejar `npm run verify -- --strict` en verde. | `src/styles/` | Revisión de Claude |
 | B | Spec 01, lotes B1–B6 (en paralelo según la tabla de la spec). | `src/` | Revisión de Claude + prueba del dueño |
-| C | Spec 02 backend: migración + pruebas **en staging**. Puede ir en paralelo con B (solo toca `supabase/`). | `supabase/` | Revisión de Claude |
+| C | Spec 02 backend: adaptar el borrador v8 al esquema **real** de producción y probarlo **en staging**. Puede ir en paralelo con B (solo toca `supabase/`). | `supabase/` | Revisión de Claude |
 | D | Spec 02 frontend: perfil, selector de alcance, "Registrar para", pestaña Revendedores. | `src/` | Revisión de Claude + prueba del dueño |
 | E | Aplicar en producción: respaldo, migración, pruebas con usuarios reales. | Supabase prod | **El dueño, explícitamente** |
 
@@ -64,9 +66,15 @@ el reporte con los 7 criterios de aceptación de la spec mapeados uno por uno.
 ```
 /migracion-segura
 Spec: docs/specs/02-multi-revendedor.md. Decisiones del dueño: D1=<…>, D2=<…>, D3=<…>.
-Pruebas: supabase/tests/rls_multirevendedor.sql (ajusta solo la preparación de datos si el esquema real lo exige;
-no debilites aserciones). Termina con las 15 pruebas en verde en staging y el plan de aplicación en producción.
-No toques producción.
+Punto de partida: supabase/drafts/v8_multi_revendedor.sql (ya validado en local con 19 pruebas y 9 mutaciones).
+1. Lee el esquema REAL de producción con supabase-guardian (solo lectura) y lista cada diferencia con lo que asume
+   el borrador (tablas, columnas, índices, TODAS las políticas, funciones y sus firmas, grants, triggers).
+2. Ajusta una copia en supabase/migrations/<fecha>_v8_multi_revendedor.sql solo donde el esquema real lo exija;
+   explica cada cambio. No cambies el modelo (cuentas, reglas RLS, controles en RPC) sin preguntarme.
+3. Aplícala en STAGING y ejecuta supabase/tests/rls_multirevendedor.sql: 19 pruebas en verde. No debilites aserciones.
+4. Si modificaste la migración, ejecuta supabase/tests/local/mutate.sh con MIG=<tu migración> (o pídeme que lo haga).
+5. Entrégame: diferencias encontradas, diff contra el borrador, salida de las pruebas y plan de producción
+   (respaldo, aplicación, verificación, reversión). No toques producción.
 ```
 
 ### Fase D (después de B y C)

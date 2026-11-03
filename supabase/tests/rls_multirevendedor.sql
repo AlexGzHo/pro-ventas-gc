@@ -143,6 +143,14 @@ do $$ declare ok boolean := false; begin
   if not ok then raise exception 'FALLO 8: R2 fusionó un cliente de R3'; end if;
 end $$;
 
+-- 16. Por REST tampoco puede apuntar su propia venta al cliente de R3 (lo impide el trigger de integridad).
+do $$ declare ok boolean := false; begin
+  begin update public.subscriptions set client_id = 'cccccccc-0000-0000-0000-000000000003'
+        where id = 'eeeeeeee-0000-0000-0000-000000000002';
+  exception when others then ok := true; end;
+  if not ok then raise exception 'FALLO 16: R2 enlazó su venta al cliente de R3 por REST'; end if;
+end $$;
+
 -- 9. No puede ascenderse a admin.
 do $$ begin
   begin update public.profiles set role = 'admin' where id = 'aaaaaaaa-0000-0000-0000-000000000002';
@@ -198,15 +206,14 @@ end $$;
 
 -- 13. El admin registra una venta para R3 con datos de R3.
 do $$ declare v_id uuid; v_owner uuid; begin
-  select public.create_subscription_v3(
+  select r.subscription_id into v_id from public.create_subscription_v3(
       p_client_id => 'cccccccc-0000-0000-0000-000000000003', p_product_id => 'dddddddd-0000-0000-0000-000000000003',
       p_provider_id => 'bbbbbbbb-0000-0000-0000-000000000003', p_username_email => 'x@example.com', p_password => 'x',
       p_profile => null, p_pin => null, p_access_url => null, p_sale_price => 10, p_cost => 5,
       p_sale_currency => 'PEN', p_cost_currency => 'PEN', p_sale_exchange_rate => null, p_cost_exchange_rate => null,
       p_start_date => current_date, p_expiry_date => current_date + 30, p_provider_expiry_date => null,
       p_extras => '{}'::jsonb, p_notes => null, p_idempotency_key => gen_random_uuid(),
-      p_owner_id => 'aaaaaaaa-0000-0000-0000-000000000003') into v_id;
-  -- Si la RPC devuelve otra cosa que el id, ajusta esta lectura sin debilitar la comprobación del dueño.
+      p_owner_id => 'aaaaaaaa-0000-0000-0000-000000000003') r;
   select owner_id into v_owner from public.subscriptions where id = v_id;
   if v_owner is distinct from 'aaaaaaaa-0000-0000-0000-000000000003' then
     raise exception 'FALLO 13: la venta creada por el admin para R3 no quedó a nombre de R3 (owner=%)', v_owner;
@@ -242,6 +249,94 @@ do $$ begin
 end $$;
 reset role;
 
-do $$ begin raise notice 'TODAS LAS PRUEBAS PASARON (1-15)'; end $$;
+-- 17. Catálogo de funciones privilegiadas: ninguna puerta trasera.
+--     SECURITY DEFINER ignora RLS, así que solo pueden existir (y ser ejecutables por usuarios)
+--     las funciones revisadas, cada una con UNA sola firma. Una versión vieja olvidada
+--     (p. ej. create_subscription_v3 sin p_owner_id, o create_subscription legada) hace fallar esto.
+--     Si se añade una función nueva legítima, se agrega a la lista tras revisarla.
+do $$
+declare r record; allowed text[] := array[
+  'create_subscription_v3','process_renewal','delete_subscription_transactional',
+  'delete_client','merge_clients','delete_provider','merge_providers',
+  'is_admin','is_active_user','can_access','current_account','is_valid_account',
+  'handle_new_user','check_subscription_owner','check_product_owner','set_renewal_owner'];
+begin
+  for r in
+    select p.proname, count(*) as firmas,
+           bool_or(has_function_privilege('authenticated', p.oid, 'execute')) as ejecutable,
+           bool_or(has_function_privilege('anon', p.oid, 'execute')) as anon_ejecuta
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.prosecdef
+    group by p.proname
+  loop
+    if not (r.proname = any(allowed)) then
+      raise exception 'FALLO 17: función SECURITY DEFINER no revisada: public.%', r.proname;
+    end if;
+    if r.firmas > 1 then
+      raise exception 'FALLO 17: public.% tiene % firmas (queda una versión vieja)', r.proname, r.firmas;
+    end if;
+    if r.anon_ejecuta then
+      raise exception 'FALLO 17: anon puede ejecutar public.%', r.proname;
+    end if;
+    if r.proname in ('handle_new_user','check_subscription_owner','check_product_owner','set_renewal_owner') and r.ejecutable then
+      raise exception 'FALLO 17: la función de trigger public.% es ejecutable por usuarios', r.proname;
+    end if;
+  end loop;
+end $$;
+
+-- ------------------------------------------------- Varias personas en una cuenta
+-- L = admin miembro de la cuenta de A (caso Liz). R3B = ayudante de la cuenta de R3.
+insert into auth.users (id, email, aud, role) values
+  ('ffffffff-0000-0000-0000-00000000000a', 'l.test@example.com',   'authenticated', 'authenticated'),
+  ('ffffffff-0000-0000-0000-00000000003b', 'r3b.test@example.com', 'authenticated', 'authenticated');
+update public.profiles set role = 'admin', account_id = 'aaaaaaaa-0000-0000-0000-000000000001'
+where id = 'ffffffff-0000-0000-0000-00000000000a';
+update public.profiles set account_id = 'aaaaaaaa-0000-0000-0000-000000000003'
+where id = 'ffffffff-0000-0000-0000-00000000003b';
+
+-- 18. L crea cliente y venta con el catálogo de la cuenta de A, sin indicar dueño: todo queda en la cuenta de A.
+select set_config('request.jwt.claims', '{"sub":"ffffffff-0000-0000-0000-00000000000a","role":"authenticated"}', true);
+set local role authenticated;
+do $$ declare v_client uuid; v_sub uuid; v_owner uuid; begin
+  insert into public.clients (name) values ('Cliente creado por L') returning id, owner_id into v_client, v_owner;
+  if v_owner is distinct from 'aaaaaaaa-0000-0000-0000-000000000001' then
+    raise exception 'FALLO 18: el cliente creado por L no quedó en la cuenta de A (owner=%)', v_owner;
+  end if;
+  select r.subscription_id into v_sub from public.create_subscription_v3(
+      p_client_id => v_client, p_product_id => 'dddddddd-0000-0000-0000-000000000001',
+      p_provider_id => 'bbbbbbbb-0000-0000-0000-000000000001', p_username_email => null, p_password => null,
+      p_profile => null, p_pin => null, p_access_url => null, p_sale_price => 10, p_cost => 5,
+      p_sale_currency => 'PEN', p_cost_currency => 'PEN', p_sale_exchange_rate => null, p_cost_exchange_rate => null,
+      p_start_date => current_date, p_expiry_date => current_date + 30, p_provider_expiry_date => null,
+      p_extras => '{}'::jsonb, p_notes => null, p_idempotency_key => gen_random_uuid()) r;
+  if (select owner_id from public.subscriptions where id = v_sub) is distinct from 'aaaaaaaa-0000-0000-0000-000000000001' then
+    raise exception 'FALLO 18: la venta creada por L no quedó en la cuenta de A';
+  end if;
+end $$;
+reset role;
+
+-- 19. R3B (ayudante de R3) ve y usa lo de R3, y nada de R2 ni de A.
+select set_config('request.jwt.claims', '{"sub":"ffffffff-0000-0000-0000-00000000003b","role":"authenticated"}', true);
+set local role authenticated;
+do $$ declare ok boolean := false; begin
+  if not exists (select 1 from public.subscriptions where id = 'eeeeeeee-0000-0000-0000-000000000003') then
+    raise exception 'FALLO 19: el ayudante de R3 no ve las ventas de su cuenta';
+  end if;
+  if exists (select 1 from public.subscriptions where owner_id <> 'aaaaaaaa-0000-0000-0000-000000000003') then
+    raise exception 'FALLO 19: el ayudante de R3 ve ventas de otras cuentas';
+  end if;
+  begin perform public.create_subscription_v3(
+      p_client_id => 'cccccccc-0000-0000-0000-000000000003', p_product_id => 'dddddddd-0000-0000-0000-000000000003',
+      p_provider_id => null, p_username_email => null, p_password => null, p_profile => null, p_pin => null,
+      p_access_url => null, p_sale_price => 10, p_cost => 5, p_sale_currency => 'PEN', p_cost_currency => 'PEN',
+      p_sale_exchange_rate => null, p_cost_exchange_rate => null, p_start_date => current_date,
+      p_expiry_date => current_date + 30, p_provider_expiry_date => null, p_extras => '{}'::jsonb, p_notes => null,
+      p_idempotency_key => gen_random_uuid(), p_owner_id => 'aaaaaaaa-0000-0000-0000-000000000002');
+  exception when others then ok := true; end;
+  if not ok then raise exception 'FALLO 19: el ayudante de R3 creó una venta a nombre de R2'; end if;
+end $$;
+reset role;
+
+do $$ begin raise notice 'TODAS LAS PRUEBAS PASARON (1-19)'; end $$;
 
 rollback;

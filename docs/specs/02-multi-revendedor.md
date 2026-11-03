@@ -1,8 +1,15 @@
 # Spec 02 — Multi-revendedor con aislamiento de datos
 
-> Estado: **diseño aprobado; implementar primero en un proyecto Supabase de pruebas (staging)**.
+> Estado: **diseño validado localmente; falta adaptarlo al esquema real y probarlo en staging**.
 > Esta spec **sí cambia la base de datos**. Ninguna migración se aplica en producción sin que el dueño lo autorice
 > explícitamente después de ver pasar las pruebas de seguridad de la sección 7 en staging.
+>
+> **Implementación de referencia**: `supabase/drafts/v8_multi_revendedor.sql`. Se validó en un PostgreSQL 16 local que
+> reproduce `setup.sql` + migraciones v1–v7 (ver `supabase/tests/local/README.md`):
+> - las 19 pruebas de `supabase/tests/rls_multirevendedor.sql` pasan;
+> - 9 "mutaciones" (agujeros introducidos a propósito) son detectadas por alguna prueba;
+> - la app **actual**, sin cambios, sigue funcionando para Alex y Liz justo después de aplicar la migración
+>   (`supabase/tests/local/compat.sql`), así que backend y frontend pueden desplegarse por separado.
 
 ## 1. Objetivo
 
@@ -29,44 +36,60 @@ Ocultar botones o filtrar en JavaScript no es aislamiento.
 | `whatsapp_templates` usa `id` fijo (`reminder`, `credentials`, `update`) como clave primaria global. | Pasa a clave `(owner_id, id)`; quien no tenga plantillas propias usa las predeterminadas del frontend. |
 | Frontend: `OWNERS_BY_ID` en `src/constants.js` y filtro "Propietario: Alex / Liz". | Se reemplaza por datos de `profiles`. |
 | `anon` tiene GRANT sobre las tablas (lo bloquea solo RLS). | Defensa en profundidad: revocar a `anon`. |
+| `products` tiene **4 políticas superpuestas** (una `FOR ALL` y otras por operación). | La migración debe borrar **todas** las políticas de cada tabla recorriendo `pg_policies`, no por nombre: una sola política vieja permisiva rompe el aislamiento (PostgreSQL las combina con OR). |
+| Las migraciones del repo **no reconstruyen la base desde cero**: la v3 hace `ALTER TABLE products` pero `products` se creó a mano en el panel de Supabase y no está en ninguna migración. `setup.sql` solo crea `subscriptions`. | El repo no es fuente fiable del esquema real. Hay que leer producción antes de adaptar la migración, y después dejar `setup.sql` actualizado (requisito del MVP en `CLAUDE.md`). |
+| `create_subscription_v3` y `process_renewal`, ante una `idempotency_key` repetida, **devuelven la fila existente antes de comprobar quién llama**. | Con varios revendedores, reutilizar una clave ajena revelaría IDs y montos de otra cuenta. La comprobación de acceso debe ir antes de cualquier respuesta. |
+| La función legada `create_subscription` sigue existiendo (no la usa el frontend). | Se elimina; si no, queda como puerta trasera sin controles de dueño. |
 
-> Antes de diseñar la migración, **verificar contra la base real** (solo lectura, skill `supabase-guardian`, modalidad 2)
-> que el esquema remoto coincide con `supabase/schemas/` y `supabase/migrations/`. Si difiere, se manda lo remoto.
+> Antes de aplicar la migración, **verificar contra la base real** (solo lectura, skill `supabase-guardian`, modalidad 2)
+> que el esquema remoto coincide con lo que asume el borrador. Si difiere, se manda lo remoto.
 
 ## 4. Modelo de datos objetivo
 
-### 4.1 `public.profiles`
+### 4.1 Cuentas y `public.profiles`
+
+**El dueño de los datos es una CUENTA, no una persona.** Cada revendedor tiene su cuenta; Alex y Liz comparten la
+cuenta de Alex (un solo negocio, un solo catálogo). Así un revendedor podrá tener ayudantes en el futuro.
+
+> Por qué: con "dueño = persona", lo que Liz creara tras la migración quedaría a su nombre y ya no podría usar el
+> catálogo común de Alex: **no podría registrar ninguna venta**. Se detectó al validar el borrador y lo cubre la prueba 18.
 
 ```
 id            uuid  PK, FK → auth.users(id) ON DELETE CASCADE
+account_id    uuid  NOT NULL, FK → profiles(id)   -- titular de la cuenta (el titular tiene account_id = id)
 display_name  text  NOT NULL
 role          text  NOT NULL CHECK (role IN ('admin','reseller')) DEFAULT 'reseller'
 is_active     boolean NOT NULL DEFAULT true
 created_at    timestamptz NOT NULL DEFAULT now()
 ```
 
-- Trigger `on auth.users insert` → crea el perfil con `role = 'reseller'` y `display_name` = parte local del correo.
-- Backfill: perfiles para los usuarios existentes. Alex = `admin`. Liz = **ver decisión D1**.
+- Trigger `on auth.users insert` → perfil `reseller`, titular de su propia cuenta, `display_name` = parte local del correo.
+- Backfill: perfiles para los usuarios existentes. Alex = `admin`, titular. Liz = **D1** (recomendado: `admin`, en la cuenta de Alex).
 
-### 4.2 Funciones auxiliares (todas `STABLE`, `SECURITY DEFINER`, `SET search_path = ''`, sin parámetros manipulables)
+### 4.2 Funciones auxiliares (todas `STABLE`, `SECURITY DEFINER`, `SET search_path = ''`)
 
-- `public.is_admin()` → `true` si el perfil de `auth.uid()` es `admin` y está activo.
-- `public.is_active_user()` → `true` si el perfil de `auth.uid()` existe y está activo.
-- `public.can_access(p_owner uuid)` → `is_active_user() AND (p_owner = auth.uid() OR is_admin())`.
+- `public.current_account()` → cuenta del usuario actual; `null` si no tiene perfil o está desactivado.
+- `public.is_admin()` → el perfil de `auth.uid()` es `admin` y está activo.
+- `public.is_active_user()` → el perfil de `auth.uid()` existe y está activo.
+- `public.can_access(p_owner uuid)` → usuario activo y (`admin` o `p_owner = su cuenta`).
+- `public.is_valid_account(p_owner uuid)` → `p_owner` es el titular de una cuenta activa.
 
-Usar `(select auth.uid())` y `(select public.is_admin())` dentro de las políticas para que PostgreSQL las evalúe una vez por consulta (rendimiento).
+Dentro de las políticas se usan como `(select public.is_admin())` y `(select public.current_account())` para que
+PostgreSQL las evalúe una vez por consulta y no por fila.
 
-### 4.3 Columna `owner_id` en las tablas de negocio
+### 4.3 Columna `owner_id` (= cuenta) en las tablas de negocio
 
 `clients`, `products`, `providers`, `subscriptions`, `subscription_renewals`, `whatsapp_templates`:
 
 ```
-owner_id uuid NOT NULL DEFAULT auth.uid() REFERENCES public.profiles(id)
-índice sobre owner_id
+owner_id uuid NOT NULL DEFAULT public.current_account() REFERENCES public.profiles(id)
+índice sobre owner_id; inmutable (trigger: no se puede cambiar después de creado)
 ```
 
-Backfill: `clients`/`subscriptions` desde `created_by`; `subscription_renewals` desde su suscripción; `products`,
-`providers` y `whatsapp_templates` existentes → admin. Si `created_by` es nulo → admin.
+Backfill: **todo lo existente pasa a la cuenta de Alex**. Hoy Alex y Liz comparten catálogo, clientes y proveedores;
+repartir por `created_by` mezclaría cuentas dentro de una misma venta y bloquearía editarla. `created_by` se conserva
+como dato histórico. La migración termina con una comprobación que **aborta todo** si queda alguna venta, producto o
+renovación con cuentas mezcladas.
 
 ### 4.4 Integridad entre dueños (obligatorio)
 
@@ -82,14 +105,16 @@ Una venta de un revendedor **no puede** apuntar al cliente, producto o proveedor
 
 ## 5. Políticas RLS (matriz)
 
-Para cada tabla de negocio, cuatro políticas separadas (`SELECT`, `INSERT`, `UPDATE`, `DELETE`), `TO authenticated`:
+Para cada tabla de negocio, cuatro políticas separadas (`SELECT`, `INSERT`, `UPDATE`, `DELETE`), `TO authenticated`.
+Regla común `R` = `(select public.is_admin()) OR owner_id = (select public.current_account())`
+(`current_account()` es `null` para usuarios desactivados, así que quedan fuera sin regla extra).
 
 | Operación | Regla |
 |---|---|
-| SELECT | `public.can_access(owner_id)` |
-| INSERT | `WITH CHECK (public.can_access(owner_id))` → un revendedor solo puede insertar con su propio `owner_id`; el admin puede insertar para cualquiera. |
-| UPDATE | `USING (public.can_access(owner_id)) WITH CHECK (public.can_access(owner_id))` → impide "regalar" un registro a otro dueño. |
-| DELETE | `public.can_access(owner_id)` |
+| SELECT | `USING (R)` |
+| INSERT | `WITH CHECK (R)` → un revendedor solo inserta en su cuenta; el admin, en cualquiera. |
+| UPDATE | `USING (R) WITH CHECK (R)`; además `owner_id` es inmutable (trigger). |
+| DELETE | `USING (R)` |
 
 Excepciones:
 - `subscription_renewals`: se mantienen bloqueados INSERT/UPDATE/DELETE por REST (solo vía RPC); SELECT con `can_access`.
@@ -106,12 +131,12 @@ Cada función `SECURITY DEFINER` debe, **al inicio**:
 
 | Función | Cambio |
 |---|---|
-| `create_subscription_v3` | Nuevo parámetro opcional `p_owner_id uuid DEFAULT NULL`. Si es nulo → `auth.uid()`. Si es distinto de `auth.uid()` → solo permitido a admin. Verificar que cliente, producto y proveedor pertenecen a ese dueño. La renovación inicial hereda el `owner_id`. Mantener idempotencia. |
-| `process_renewal` | Verificar `can_access` sobre la suscripción. La renovación hereda `owner_id` de la suscripción. |
+| `create_subscription_v3` | Nuevo parámetro opcional `p_owner_id uuid DEFAULT NULL` (cuenta). Si es nulo → `current_account()`. Si es otra cuenta → solo admin, y debe ser una cuenta activa (`is_valid_account`). Cliente, producto y proveedor deben ser de esa cuenta (mismo mensaje de error que si no existieran). **Se borra la firma anterior** (si no, queda una sobrecarga sin controles). Ante `idempotency_key` repetida solo devuelve la fila si es de la misma cuenta. |
+| `process_renewal` | Verificar `can_access` sobre la suscripción **antes** de la respuesta idempotente temprana. La renovación hereda `owner_id` de la suscripción (trigger). |
 | `delete_subscription_transactional` | Verificar `can_access` sobre la suscripción. |
 | `delete_client`, `delete_provider` | Verificar `can_access`. |
 | `merge_clients`, `merge_providers` | Verificar `can_access` en ambos y mismo dueño. |
-| `create_subscription` (legada) | Si el frontend ya no la usa, eliminarla o aplicarle las mismas reglas. No dejar una puerta trasera. |
+| `create_subscription` (legada) | Eliminarla (el frontend no la usa). |
 
 Además: `REVOKE EXECUTE ... FROM anon, public` y `GRANT EXECUTE ... TO authenticated` en cada función.
 
@@ -138,35 +163,43 @@ revendedores R2 y R3, revendedor inactivo R4, cada uno con un cliente, producto,
 | 13 | A crea venta con `p_owner_id = R3` usando cliente/producto de R3 | OK, `owner_id = R3` |
 | 14 | A crea venta para R3 con el cliente de R2 | Error (integridad entre dueños) |
 | 15 | R2 SELECT en `subscription_renewals` | Solo renovaciones de sus ventas |
+| 16 | R2 actualiza por REST su venta apuntándola al cliente de R3 | Error (trigger de integridad) |
+| 17 | Catálogo de funciones `SECURITY DEFINER` | Solo las revisadas, una firma cada una, ninguna ejecutable por `anon`, las de trigger no ejecutables por usuarios |
+| 18 | L (admin en la cuenta de A, caso Liz) crea cliente y venta sin indicar dueño | Todo queda en la cuenta de A |
+| 19 | R3B (ayudante en la cuenta de R3) | Ve lo de R3, nada de otros; no puede crear a nombre de R2 |
+
+**Pruebas de mutación** (`supabase/tests/local/mutate.sh`): se introducen a propósito 9 agujeros (política vieja
+olvidada, renovar sin comprobar dueño, sin trigger de integridad, perfiles editables, inactivo con acceso, anon con
+lectura, firma vieja de la RPC, función legada restaurada, dueño = persona). Cada uno debe hacer fallar alguna prueba.
+Si se cambia la migración, se vuelven a correr.
 
 ## 8. Frontend
 
-- `src/state.js`: cargar el perfil propio al iniciar sesión (`profiles` → `role`, `display_name`). Exponer `state.profile` e `isAdmin()`.
-- Eliminar `OWNERS_BY_ID` y toda referencia a "Alex/Liz" fijos. El nombre del dueño de una fila sale de `profiles` (el admin puede leerlos todos; el revendedor solo el suyo).
+- `src/state.js`: cargar el perfil propio al iniciar sesión (`profiles` → `role`, `account_id`, `display_name`). Exponer `state.profile` e `isAdmin()`.
+- Eliminar `OWNERS_BY_ID` y toda referencia a "Alex/Liz" fijos. `owner_id` es la **cuenta**: su nombre es el `display_name` del perfil titular (`profiles` donde `id = account_id`). El admin puede leer todos los perfiles; el revendedor solo el suyo.
 - **Admin**:
   - Selector de alcance en la barra superior: "Viendo: Todo · Solo mío · <revendedor>". Filtra en el cliente lo que RLS ya entrega (es comodidad, no seguridad).
-  - En Nueva venta, campo **"Registrar para"** (por defecto el propio admin). Al cambiarlo, los buscadores de cliente/servicio/proveedor muestran solo los de ese dueño. Se envía como `p_owner_id`.
+  - En Nueva venta, campo **"Registrar para"** con las cuentas (perfiles titulares activos); por defecto la cuenta propia. Al cambiarlo, los buscadores de cliente/servicio/proveedor muestran solo los de esa cuenta, y si crea un cliente o servicio en línea lo inserta con `owner_id` = esa cuenta. Se envía como `p_owner_id`.
   - Ajustes → **Revendedores**: lista con nombre, estado (activo/inactivo), n.º de clientes, ventas activas, ingresos y ganancia del mes. Acciones: renombrar y activar/desactivar (UPDATE en `profiles`). Abrir un revendedor = aplicar el selector de alcance a ese revendedor.
   - Alta de revendedores: **no hay registro público**. El admin crea o invita al usuario en el panel de Supabase (Authentication → Users → Add user / Invite). El trigger crea su perfil como revendedor. (Crear usuarios desde la app requeriría una Edge Function con `service_role`; queda fuera de esta fase.)
 - **Revendedor**: misma app sin selector de alcance, sin "Registrar para" y sin la pestaña Revendedores.
-- Plantillas WhatsApp: cada usuario edita las suyas; si no tiene, se usan las predeterminadas de `src/whatsapp.js`.
+- Plantillas WhatsApp: cada cuenta edita las suyas; si no tiene, se usan las predeterminadas de `src/whatsapp.js`. El `upsert` actual sigue funcionando (PostgREST usa la PK `(owner_id, id)` y `owner_id` toma su valor por defecto).
 - Ningún cambio de UI sustituye a RLS: todas las pruebas de la sección 7 deben pasar aunque se use la API directamente.
 
 ## 9. Despliegue
 
-1. Crear un proyecto Supabase **de pruebas** (o una rama de Supabase) y reproducir el esquema actual desde `supabase/`.
-2. Escribir la migración en `supabase/migrations/<fecha>_v8_multi_revendedor.sql`, idempotente, en este orden:
-   perfiles y trigger → funciones auxiliares → columnas `owner_id` + backfill + `NOT NULL` → integridad y unicidad
-   → políticas nuevas (borrando las viejas en la **misma transacción**) → RPCs reescritas → revokes.
-3. Ejecutar `supabase/tests/rls_multirevendedor.sql` en staging: las 15 pruebas en verde.
+1. Leer el esquema real de producción (solo lectura) y comparar con lo que asume `supabase/drafts/v8_multi_revendedor.sql`.
+2. Crear un proyecto Supabase **de pruebas** con ese esquema real (no con las migraciones del repo, que no lo reproducen).
+3. Copiar el borrador a `supabase/migrations/<fecha>_v8_multi_revendedor.sql` con los ajustes necesarios, aplicarlo en staging y
+   ejecutar `supabase/tests/rls_multirevendedor.sql`: las 19 pruebas en verde. Si se cambió la migración, repetir las mutaciones en local.
 4. Probar el frontend contra staging (admin + 2 revendedores de prueba).
 5. Solo con autorización del dueño: **respaldo completo de producción**, aplicar la migración, repetir las pruebas 1, 2, 11 y 12 con usuarios reales.
 6. Actualizar `supabase/setup.sql`, `docs/ARQUITECTURA.md`, `docs/BACKEND.md` y `CLAUDE.md` (sección Seguridad y Modelo de datos).
 
 ## 10. Decisiones abiertas (las responde el dueño antes de empezar)
 
-- **D1. Liz**: ¿admin (ve todo, como hoy) o revendedora? *Recomendado: admin, para no cambiar lo que ve hoy.*
-- **D2. Catálogo**: ¿cada revendedor tiene su propio catálogo de servicios, o el admin publica un catálogo común (solo nombre y logo, sin costos) que todos pueden usar? *Recomendado ahora: catálogo propio por dueño (más simple y no expone costos). El catálogo común encaja mejor con la fase futura de "cuentas".*
+- **D1. Liz**: ¿admin en la cuenta de Alex (ve y opera todo, como hoy) o revendedora con cuenta propia? *Recomendado: admin en la cuenta de Alex (es lo que hace el borrador).*
+- **D2. Catálogo**: ¿cada cuenta tiene su propio catálogo de servicios, o el admin publica un catálogo común (solo nombre y logo, sin costos) que todos pueden usar? *Recomendado ahora: catálogo propio por dueño (más simple y no expone costos). El catálogo común encaja mejor con la fase futura de "cuentas".*
 - **D3. Proveedores**: *Recomendado: privados por dueño* (un revendedor nunca ve de dónde compra el admin).
 
 ## 11. Fuera de alcance
