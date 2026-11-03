@@ -96,7 +96,7 @@ PRO VENTAS GC — Vista Plantillas WhatsApp
   padding: 12px;
   border-radius: var(--radius-inputs, 6px);
   border: 1px solid var(--border-subtle);
-  background: var(--bg-surface);
+  background: var(--bg-surface-sunken);
   color: var(--text-primary);
   resize: vertical;
   min-height: 130px;

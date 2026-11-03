@@ -54,13 +54,13 @@ PRO VENTAS GC — Vista Inicio
   gap: 14px;
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
-  border-left: 3px solid var(--status-warning-text);
+
   border-radius: var(--radius-md, 8px);
   padding: 12px 16px;
   transition: all 0.15s ease;
 }
 .inicio-attention-card:hover { background: var(--bg-card-hover); border-color: var(--border-strong); }
-.inicio-attention-card.attention-danger { border-left-color: var(--status-danger-text); }
+
 .inicio-attention-info { display: flex; flex-direction: column; gap: 4px; }
 .inicio-attention-client { font-size: 14px; font-weight: 650; color: var(--text-primary); }
 .inicio-attention-meta {
@@ -78,6 +78,16 @@ PRO VENTAS GC — Vista Inicio
 
 @media (max-width: 640px) {
 .inicio-kpi-grid { grid-template-columns: 1fr; }
-.inicio-attention-card { flex-direction: column; align-items: stretch; }
-.inicio-attention-actions { justify-content: flex-end; }
+.inicio-attention-card { flex-direction: column; align-items: stretch; gap: 12px; }
+.inicio-attention-actions {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+.inicio-attention-actions .btn {
+  min-height: 44px;
+  justify-content: center;
+  width: 100%;
+}
 }

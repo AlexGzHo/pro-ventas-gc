@@ -43,6 +43,7 @@ Tokens: Geometry, Spacing Scale (4/8/12/16/24/32), Typography, Status Colors, Sh
   --fs-desc: 13.5px;
   --fs-meta: 12.5px;
   --fs-small: 11.5px;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   /* Microinteractions & Transitions */
   --transition-fast: 140ms ease;
   --transition-normal: 180ms ease;
@@ -102,6 +103,10 @@ Tema Oscuro (Midnight Precision Instrument) — Default
   --status-danger-text: #f87171;
   --status-danger-border: rgba(239, 68, 68, 0.28);
   --danger-color: #f87171;
+  --status-info-bg: rgba(59, 130, 246, 0.12);
+  --status-info-text: #60a5fa;
+  --status-info-border: rgba(59, 130, 246, 0.28);
+  --info-color: #60a5fa;
   --status-neutral-bg: rgba(148, 163, 184, 0.08);
   --status-neutral-text: #94a3b8;
   --status-neutral-border: rgba(148, 163, 184, 0.22);

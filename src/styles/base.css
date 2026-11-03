@@ -36,6 +36,17 @@ a:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 /* ==========================================================================
 Typography
 ========================================================================== */
@@ -188,3 +199,15 @@ Badges
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+@media (max-width: 640px) {
+  .btn {
+    min-height: 44px;
+    padding: 10px 14px;
+  }
+  .btn-small {
+    min-height: 44px;
+    padding: 8px 12px;
+  }
+}
+

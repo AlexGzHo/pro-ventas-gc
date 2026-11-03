@@ -50,7 +50,7 @@ PRO VENTAS GC — Vista Clientes & Modales Asociados
   border-radius: 50%;
   border: 2px solid var(--bg-card);
   object-fit: cover;
-  background-color: var(--bg-surface);
+  background-color: var(--bg-surface-elevated);
   flex-shrink: 0;
 }
 .client-sub-avatar:not(:first-child) { margin-left: -8px; }
@@ -170,7 +170,7 @@ PRO VENTAS GC — Vista Clientes & Modales Asociados
   height: 36px;
   border-radius: 8px;
   object-fit: cover;
-  background: var(--bg-surface);
+  background: var(--bg-surface-elevated);
   flex-shrink: 0;
 }
 .client-sub-logo-initials {

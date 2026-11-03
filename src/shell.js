@@ -76,13 +76,6 @@ export function renderShellMarkup({ userName = '', contentHtml = '', activeNav =
         </div>
 
         <nav class="sidebar-nav" aria-label="Módulos">
-          <div class="sidebar-quick-action">
-            <button id="sidebarNewSubBtn" class="btn btn-primary btn-sidebar-new" type="button" title="Registrar nueva suscripción">
-              ${SHELL_ICONS.plus}
-              <span class="nav-text">Nueva suscripción</span>
-            </button>
-          </div>
-
           <div class="nav-section-label">Operación</div>
           <a href="#inicio" class="nav-item ${isInicio ? 'active' : ''}" data-nav="inicio" data-tooltip="Inicio" ${isInicio ? 'aria-current="page"' : ''}>
             ${SHELL_ICONS.home}
@@ -290,19 +283,6 @@ export function initShell({ onLogout, onNavigate, onNewSubscription } = {}) {
       btn.classList.toggle('active', isTarget);
     });
   };
-
-  // Click en botón de acción rápida "Nueva suscripción"
-  const newSubBtn = sidebar.querySelector('#sidebarNewSubBtn');
-  if (newSubBtn) {
-    newSubBtn.addEventListener('click', () => {
-      if (!isDesktop()) {
-        closeDrawer();
-      }
-      if (typeof onNewSubscription === 'function') {
-        onNewSubscription();
-      }
-    });
-  }
 
   // Click en enlaces de navegación del sidebar
   sidebar.querySelectorAll('.sidebar-nav .nav-item').forEach((item) => {

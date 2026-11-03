@@ -31,7 +31,8 @@ import {
   unarchiveRow,
   deleteRow,
   openCredentialsModal,
-  safeWhatsapp
+  safeWhatsapp,
+  copyCredentialsAction
 } from '../features/subscriptionActions.js'
 
 export function renderSubscriptionsSection(container) {
@@ -49,12 +50,10 @@ export function renderSubscriptionsSection(container) {
     </header>
 
     <div class="subs-toolbar-row">
-      <div class="subs-search-box">
-        <span class="subs-search-icon" aria-hidden="true">
-          ${ICONS.search}
-        </span>
+      <div class="search-box">
+        <span class="search-icon" aria-hidden="true">${ICONS.search}</span>
         <input id="searchInput" type="search" placeholder="Buscar cliente, celular, servicio, correo..." value="${escapeHtml(state.filters.search)}">
-        <button id="searchClearBtn" class="subs-search-clear ${state.filters.search ? '' : 'hidden'}" type="button" title="Limpiar búsqueda" aria-label="Limpiar búsqueda">
+        <button id="searchClearBtn" class="search-clear ${state.filters.search ? '' : 'hidden'}" type="button" title="Limpiar búsqueda" aria-label="Limpiar búsqueda">
           ${ICONS.close}
         </button>
       </div>
@@ -568,7 +567,7 @@ export function cardHtml(row) {
       </div>
 
       <div class="card-actions">
-        <div class="card-actions-primary">
+        <div class="card-actions-row card-actions-row-1">
           <button type="button" class="btn btn-small renew btn-action-renovar" title="Extender período">
             ${ICONS.calendar}
             <span>Renovar</span>
@@ -577,34 +576,37 @@ export function cardHtml(row) {
             <span class="cobrar-icon">${ICONS.whatsapp}</span>
             <span>Cobrar</span>
           </button>
+        </div>
+
+        <div class="card-actions-row card-actions-row-2">
           <button type="button" class="btn btn-small copy-all btn-action-copy" title="Copiar todo (accesos y credenciales)" aria-label="Copiar todo">
             ${ICONS.copy}
             <span class="copy-btn-text">Copiar todo</span>
           </button>
-        </div>
 
-        <div class="card-menu-wrap">
-          <button type="button" class="btn btn-small btn-ghost card-menu-btn" title="Más opciones" aria-label="Más opciones" aria-haspopup="true" aria-expanded="false">
-            ${ICONS.moreHorizontal}
-          </button>
-          <div class="card-dropdown hidden" role="menu">
-            <button type="button" class="card-dropdown-item whatsapp-data" role="menuitem">
-              <span class="dropdown-item-icon">${ICONS.messageSquare}</span> Enviar datos
+          <div class="card-menu-wrap">
+            <button type="button" class="btn btn-small btn-ghost card-menu-btn" title="Más opciones" aria-label="Más opciones" aria-haspopup="true" aria-expanded="false">
+              ${ICONS.moreHorizontal}
             </button>
-            <button type="button" class="card-dropdown-item whatsapp-update" role="menuitem">
-              <span class="dropdown-item-icon">${ICONS.refresh}</span> Actualización
-            </button>
-            <div class="card-dropdown-divider"></div>
-            <button type="button" class="card-dropdown-item edit" role="menuitem">
-              <span class="dropdown-item-icon">${ICONS.edit}</span> Editar suscripción
-            </button>
-            <button type="button" class="card-dropdown-item ${row.archived_at ? 'unarchive' : 'archive'}" role="menuitem">
-              <span class="dropdown-item-icon">${row.archived_at ? ICONS.restore : ICONS.trash}</span> ${row.archived_at ? 'Recuperar' : 'Dar de baja'}
-            </button>
-            <div class="card-dropdown-divider"></div>
-            <button type="button" class="card-dropdown-item delete-hard card-dropdown-danger" role="menuitem">
-              <span class="dropdown-item-icon">${ICONS.trash}</span> Eliminar definitivo
-            </button>
+            <div class="card-dropdown hidden" role="menu">
+              <button type="button" class="card-dropdown-item whatsapp-data" role="menuitem">
+                <span class="dropdown-item-icon">${ICONS.messageSquare}</span> Enviar datos
+              </button>
+              <button type="button" class="card-dropdown-item whatsapp-update" role="menuitem">
+                <span class="dropdown-item-icon">${ICONS.refresh}</span> Actualización
+              </button>
+              <div class="card-dropdown-divider"></div>
+              <button type="button" class="card-dropdown-item edit" role="menuitem">
+                <span class="dropdown-item-icon">${ICONS.edit}</span> Editar suscripción
+              </button>
+              <button type="button" class="card-dropdown-item ${row.archived_at ? 'unarchive' : 'archive'}" role="menuitem">
+                <span class="dropdown-item-icon">${row.archived_at ? ICONS.restore : ICONS.trash}</span> ${row.archived_at ? 'Recuperar' : 'Dar de baja'}
+              </button>
+              <div class="card-dropdown-divider"></div>
+              <button type="button" class="card-dropdown-item delete-hard card-dropdown-danger" role="menuitem">
+                <span class="dropdown-item-icon">${ICONS.trash}</span> Eliminar definitivo
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -617,18 +619,7 @@ export function bindCardEvents() {
     if (!row) return
 
     card.querySelector('.copy-all')?.addEventListener('click', async (e) => {
-      const btn = e.currentTarget
-      await copyText(credentialsPlain(row))
-      toast('Copiado: Accesos completos')
-      const originalHtml = btn.innerHTML
-      btn.classList.add('btn-copied')
-      btn.innerHTML = `${ICONS.check} <span>Copiado</span>`
-      btn.disabled = true
-      setTimeout(() => {
-        btn.innerHTML = originalHtml
-        btn.classList.remove('btn-copied')
-        btn.disabled = false
-      }, 1500)
+      await copyCredentialsAction(row, e.currentTarget)
     })
 
     card.querySelector('.whatsapp-reminder')?.addEventListener('click', () => safeWhatsapp(row, reminderText(row)))

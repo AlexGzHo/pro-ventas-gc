@@ -532,3 +532,106 @@ Responsive (móvil 360px y escritorio)
 .sub-form-container,
 .sub-form-modal .modal-body { padding-bottom: 74px; }
 }
+
+
+/* --------------------------------------------------------------------------
+Modal de Datos de Acceso (Credenciales)
+-------------------------------------------------------------------------- */
+.modal-credentials {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.empty-creds {
+  margin: 0;
+  padding: 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13.5px;
+}
+.cred-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--bg-surface-elevated, #131e33);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md, 8px);
+  padding: 8px 12px;
+  min-width: 0;
+}
+.cred-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.cred-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  line-height: 1.2;
+}
+.cred-value {
+  font-family: var(--font-mono, monospace);
+  font-size: 13.5px;
+  color: var(--text-primary);
+  background: transparent;
+  padding: 0;
+  border: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+  line-height: 1.35;
+}
+.cred-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.cred-actions .btn-icon {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md, 8px);
+  background: var(--bg-surface-sunken, #080d1a);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.cred-actions .btn-icon:hover {
+  background: var(--bg-card-hover, #17243d);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+.cred-actions .btn-icon.btn-copied {
+  background: var(--status-success-bg, rgba(16, 185, 129, 0.15));
+  border-color: var(--status-success-border, rgba(16, 185, 129, 0.4));
+  color: var(--status-success-text, #34d399);
+}
+.creds-modal-footer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+}
+.creds-footer-btn {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 600;
+  width: 100%;
+}

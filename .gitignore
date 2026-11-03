@@ -31,3 +31,9 @@ src/styles release.css
 src/styles antes*.css
 src/styles pre*.css
 src/styles.backup.css
+
+
+# Auditoría y capturas de Impeccable
+docs/impeccable/capturas/
+.impeccable/
+.agent/

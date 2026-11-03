@@ -350,3 +350,80 @@ Login Shell
 }
 .login-copy p { margin: 0; color: var(--text-muted); line-height: 1.45; font-size: 13px; }
 .auth-links-row { display: flex; justify-content: flex-end; }
+/* ==========================================================================
+Search Box Component (Contrato Compartido)
+========================================================================== */
+.search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  flex: 1;
+  min-width: 0;
+}
+.search-box input[type="search"] {
+  width: 100%;
+  height: 42px;
+  padding: 0 36px 0 38px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-inputs, 8px);
+  color: var(--text-primary);
+  font-size: var(--fs-body, 14px);
+  outline: none;
+  transition: border-color var(--transition-fast, 0.15s ease), box-shadow var(--transition-fast, 0.15s ease);
+}
+.search-box input[type="search"]:focus {
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 2px var(--color-brand-ring, rgba(59, 130, 246, 0.25));
+}
+.search-box .search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+}
+.search-box .search-clear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-xs, 4px);
+  min-width: 32px;
+  min-height: 32px;
+  transition: color var(--transition-fast, 0.15s ease), background var(--transition-fast, 0.15s ease);
+}
+.search-box .search-clear:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover-ghost);
+}
+.search-box .search-clear.hidden {
+  display: none !important;
+}
+
+@media (max-width: 640px) {
+  .toast-area {
+    left: 12px;
+    right: 12px;
+    bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+    width: auto;
+    max-width: calc(100vw - 24px);
+    margin: 0 auto;
+  }
+}
+

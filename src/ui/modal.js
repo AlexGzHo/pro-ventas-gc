@@ -31,6 +31,7 @@ export function openModal({
   onClose = null
 }) {
   const host = document.querySelector('#modalHost') || document.body
+  const previousActiveElement = document.activeElement
 
   const backdrop = document.createElement('div')
   backdrop.className = 'modal-backdrop'
@@ -111,6 +112,9 @@ export function openModal({
       if (activeModalCount === 0) {
         document.body.style.overflow = ''
       }
+      if (previousActiveElement && typeof previousActiveElement.focus === 'function') {
+        previousActiveElement.focus()
+      }
       if (typeof onClose === 'function') {
         onClose()
       }
@@ -121,6 +125,31 @@ export function openModal({
     if (closeOnEscape && e.key === 'Escape') {
       e.preventDefault()
       close()
+      return
+    }
+
+    if (e.key === 'Tab') {
+      const focusableEls = card.querySelectorAll(
+        'a[href], area[href], input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), iframe, object, embed, [tabindex="0"], [contenteditable]'
+      )
+      if (focusableEls.length === 0) {
+        e.preventDefault()
+        return
+      }
+      const firstEl = focusableEls[0]
+      const lastEl = focusableEls[focusableEls.length - 1]
+
+      if (e.shiftKey) {
+        if (document.activeElement === firstEl || !card.contains(document.activeElement)) {
+          e.preventDefault()
+          lastEl.focus()
+        }
+      } else {
+        if (document.activeElement === lastEl || !card.contains(document.activeElement)) {
+          e.preventDefault()
+          firstEl.focus()
+        }
+      }
     }
   }
 

@@ -19,6 +19,23 @@ export function safeWhatsapp(row, message) {
   }
 }
 
+export async function copyCredentialsAction(row, btn) {
+  if (!row) return
+  await copyText(credentialsPlain(row))
+  toast('Copiado: Accesos completos')
+  if (btn) {
+    const originalHtml = btn.innerHTML
+    btn.classList.add('btn-copied')
+    btn.innerHTML = `${ICONS.check} <span>Copiado</span>`
+    btn.disabled = true
+    setTimeout(() => {
+      btn.innerHTML = originalHtml
+      btn.classList.remove('btn-copied')
+      btn.disabled = false
+    }, 1500)
+  }
+}
+
 export async function archiveRow(row) {
   const ok = await confirmDialog({
     title: 'Dar de baja suscripción',
@@ -135,31 +152,35 @@ export function openCredentialsModal(row) {
 
   const hasCreds = creds.length > 0 || extras.length > 0
 
+  const renderField = (key, value, customLabel) => {
+    const label = customLabel || credentialLabels[key] || key
+    const isPassword = key.toLowerCase() === 'password' || key.toLowerCase().includes('contrase')
+    const displayVal = isPassword ? '••••••••' : String(value)
+    return `
+      <div class="cred-row" data-key="${escapeHtml(key)}">
+        <div class="cred-info">
+          <span class="cred-label">${escapeHtml(label)}</span>
+          <code class="cred-value ${isPassword ? 'cred-masked' : ''}" data-full-value="${escapeHtml(String(value))}">${escapeHtml(displayVal)}</code>
+        </div>
+        <div class="cred-actions">
+          ${isPassword ? `
+            <button type="button" class="btn btn-icon toggle-password-visibility" aria-label="Mostrar contraseña" title="Mostrar contraseña">
+              ${ICONS.eye}
+            </button>
+          ` : ''}
+          <button type="button" class="btn btn-icon copy-modal-field" data-value="${escapeHtml(String(value))}" data-label="${escapeHtml(label)}" aria-label="Copiar ${escapeHtml(label)}" title="Copiar ${escapeHtml(label)}">
+            ${ICONS.copy}
+          </button>
+        </div>
+      </div>
+    `
+  }
+
   const bodyHtml = `
     ${hasCreds ? `
       <div class="credentials modal-credentials">
-        ${creds.map(([key, value]) => `
-          <div class="cred">
-            <div class="cred-copy">
-              <span class="cred-label">${escapeHtml(credentialLabels[key] || key)}</span>
-              <code class="cred-value">${escapeHtml(value)}</code>
-            </div>
-            <button type="button" class="btn btn-small copy-modal-field" data-value="${escapeHtml(value)}" data-label="${escapeHtml(credentialLabels[key] || key)}">
-              ${ICONS.copy} Copiar
-            </button>
-          </div>
-        `).join('')}
-        ${extras.map(([key, value]) => `
-          <div class="cred">
-            <div class="cred-copy">
-              <span class="cred-label">${escapeHtml(key)}</span>
-              <code class="cred-value">${escapeHtml(value)}</code>
-            </div>
-            <button type="button" class="btn btn-small copy-modal-field" data-value="${escapeHtml(value)}" data-label="${escapeHtml(key)}">
-              ${ICONS.copy} Copiar
-            </button>
-          </div>
-        `).join('')}
+        ${creds.map(([key, value]) => renderField(key, value)).join('')}
+        ${extras.map(([key, value]) => renderField(key, value, key)).join('')}
       </div>
     ` : `
       <p class="empty-creds">No hay credenciales registradas para esta suscripción.</p>
@@ -168,15 +189,12 @@ export function openCredentialsModal(row) {
 
   const footerHtml = `
     <div class="creds-modal-footer">
-      <div class="creds-modal-actions">
-        <button type="button" id="copyAllCredsBtn" class="btn btn-small">
-          ${ICONS.copy} Copiar todo
-        </button>
-        <button type="button" id="sendWhatsappCredsBtn" class="btn btn-small">
-          ${ICONS.whatsapp} Enviar WhatsApp
-        </button>
-      </div>
-      <button type="button" id="closeCredsBtn" class="btn btn-small">Cerrar</button>
+      <button type="button" id="copyAllCredsBtn" class="btn btn-primary creds-footer-btn">
+        ${ICONS.copy} <span>Copiar todo</span>
+      </button>
+      <button type="button" id="sendWhatsappCredsBtn" class="btn creds-footer-btn">
+        ${ICONS.whatsapp} <span>Enviar por WhatsApp</span>
+      </button>
     </div>
   `
 
@@ -189,8 +207,30 @@ export function openCredentialsModal(row) {
     customClass: 'creds-modal'
   })
 
-  modal.el.querySelector('#closeCredsBtn')?.addEventListener('click', modal.close)
+  // Toggle mostrar/ocultar contraseña
+  modal.el.querySelectorAll('.toggle-password-visibility').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const rowEl = btn.closest('.cred-row')
+      const codeEl = rowEl?.querySelector('.cred-value')
+      if (!codeEl) return
+      const isMasked = codeEl.classList.contains('cred-masked')
+      if (isMasked) {
+        codeEl.textContent = codeEl.dataset.fullValue || ''
+        codeEl.classList.remove('cred-masked')
+        btn.innerHTML = ICONS.eyeOff
+        btn.setAttribute('aria-label', 'Ocultar contraseña')
+        btn.setAttribute('title', 'Ocultar contraseña')
+      } else {
+        codeEl.textContent = '••••••••'
+        codeEl.classList.add('cred-masked')
+        btn.innerHTML = ICONS.eye
+        btn.setAttribute('aria-label', 'Mostrar contraseña')
+        btn.setAttribute('title', 'Mostrar contraseña')
+      }
+    })
+  })
 
+  // Copiar campo individual
   modal.el.querySelectorAll('.copy-modal-field').forEach((btn) => {
     btn.addEventListener('click', async () => {
       const val = btn.dataset.value || ''
@@ -199,7 +239,7 @@ export function openCredentialsModal(row) {
       toast(`Copiado: ${label}`)
       const originalHtml = btn.innerHTML
       btn.classList.add('btn-copied')
-      btn.innerHTML = `${ICONS.check} Copiado`
+      btn.innerHTML = ICONS.check
       btn.disabled = true
       setTimeout(() => {
         btn.innerHTML = originalHtml
@@ -209,13 +249,14 @@ export function openCredentialsModal(row) {
     })
   })
 
+  // Copiar todo
   modal.el.querySelector('#copyAllCredsBtn')?.addEventListener('click', async (e) => {
     const btn = e.currentTarget
     await copyText(credentialsPlain(row))
     toast('Copiado: Accesos completos')
     const originalHtml = btn.innerHTML
     btn.classList.add('btn-copied')
-    btn.innerHTML = `${ICONS.check} Copiado`
+    btn.innerHTML = `${ICONS.check} <span>Copiado</span>`
     btn.disabled = true
     setTimeout(() => {
       btn.innerHTML = originalHtml
@@ -224,6 +265,7 @@ export function openCredentialsModal(row) {
     }, 1500)
   })
 
+  // Enviar por WhatsApp
   modal.el.querySelector('#sendWhatsappCredsBtn')?.addEventListener('click', () => {
     safeWhatsapp(row, credentialsText(row))
   })

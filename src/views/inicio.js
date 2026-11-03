@@ -12,7 +12,7 @@ import { supabase } from '../supabase.js'
 import { FINANCIAL_HISTORY_START, OWNERS_BY_ID } from '../constants.js'
 import { ICONS } from '../ui/icons.js'
 import { state, latestUSDTExchangeRate, rowById } from '../state.js'
-import { safeWhatsapp } from '../features/subscriptionActions.js'
+import { safeWhatsapp, copyCredentialsAction } from '../features/subscriptionActions.js'
 import { openRenewModal } from '../features/renewModal.js'
 import { reminderText } from '../whatsapp.js'
 
@@ -490,6 +490,10 @@ function renderAttentionItemHtml(row) {
           ${ICONS.whatsapp}
           <span>Cobrar</span>
         </button>
+        <button type="button" class="btn btn-small btn-action-copy-inicio" data-sub-id="${row.id}" title="Copiar accesos y credenciales" aria-label="Copiar accesos">
+          ${ICONS.copy}
+          <span>Copiar accesos</span>
+        </button>
         <button type="button" class="btn btn-small btn-action-renovar" data-sub-id="${row.id}" title="Renovar suscripción">
           ${ICONS.calendar}
           <span>Renovar</span>
@@ -514,6 +518,17 @@ export function bindInicioEvents(container, rows, { onNavigateToSubscription } =
       const row = rowById(rowId) || rows.find((r) => String(r.id) === String(rowId))
       if (row) {
         safeWhatsapp(row, reminderText(row))
+      }
+    })
+  })
+
+  container.querySelectorAll('.btn-action-copy-inicio').forEach((btn) => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation()
+      const rowId = btn.dataset.subId
+      const row = rowById(rowId) || rows.find((r) => String(r.id) === String(rowId))
+      if (row) {
+        await copyCredentialsAction(row, btn)
       }
     })
   })

@@ -26,51 +26,6 @@ PRO VENTAS GC — Vista Suscripciones (Fase 2-A)
   position: relative;
   width: 100%;
 }
-.subs-search-box {
-  flex: 1;
-  min-width: 0;
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-.subs-search-box input[type="search"] {
-  width: 100%;
-  height: 42px;
-  padding: 0 36px 0 38px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-inputs, 8px);
-  color: var(--text-primary);
-  font-size: 14px;
-  outline: none;
-  transition: border-color var(--transition-fast, 0.15s ease);
-}
-.subs-search-box input[type="search"]:focus { border-color: var(--color-brand); }
-.subs-search-icon {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-dim);
-  pointer-events: none;
-  display: flex;
-  align-items: center;
-}
-.subs-search-clear {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: transparent;
-  border: none;
-  color: var(--text-dim);
-  cursor: pointer;
-  padding: 4px;
-  display: flex;
-  align-items: center;
-  border-radius: 4px;
-}
-.subs-search-clear:hover { color: var(--text-primary); }
 /* Popover de Filtros */
 .subs-filter-menu-wrap { position: relative; }
 .subs-filters-btn {
@@ -382,8 +337,8 @@ PRO VENTAS GC — Vista Suscripciones (Fase 2-A)
   gap: 8px;
   margin-top: 2px;
 }
-.card-actions-primary { display: flex; align-items: center; gap: 8px; flex: 1; }
-.card-actions-primary .btn {
+.card-actions-row { display: flex; align-items: center; gap: 8px; }
+.card-actions-row .btn {
   min-height: 40px;
   padding: 0 12px;
   font-size: 12.5px;
@@ -528,15 +483,8 @@ PRO VENTAS GC — Vista Suscripciones (Fase 2-A)
 }
 .empty-state h3 { margin: 0; font-size: 17px; font-weight: 650; color: var(--text-primary); }
 .empty-state p { margin: 0; font-size: 13.5px; color: var(--text-muted); line-height: 1.45; }
-/* Modal de Credenciales y Avisos */
-.creds-modal-footer {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  width: 100%;
-}
-.creds-modal-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+/* Avisos */
+
 .danger-notice { color: var(--status-danger-text); font-weight: 500; }
 /* Responsive (Móvil 360px y tabletas) */
 
@@ -545,7 +493,7 @@ PRO VENTAS GC — Vista Suscripciones (Fase 2-A)
 .subs-header { flex-direction: column; align-items: stretch; gap: 10px; }
 .subs-header .btn { width: 100%; justify-content: center; min-height: 42px; }
 .subs-toolbar-row { flex-wrap: wrap; }
-.subs-search-box { flex: 1 1 100%; }
+.search-box { flex: 1 1 100%; }
 .subs-filter-menu-wrap { flex: 1; }
 .subs-filters-btn { width: 100%; justify-content: center; }
 .subs-clear-all-btn { flex: 0 0 auto; }
@@ -584,9 +532,16 @@ PRO VENTAS GC — Vista Suscripciones (Fase 2-A)
   border-top: 1px solid var(--border-subtle);
 }
 .summary-actions-cell .btn { width: 100%; justify-content: center; min-height: 40px; }
-.card-actions { flex-direction: column; align-items: stretch; gap: 8px; }
-.card-actions-primary { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
-.card-actions-primary .btn { min-height: 40px; padding: 0 8px; font-size: 12px; justify-content: center; }
-.card-menu-btn { width: 100%; min-height: 40px; }
+.card-actions { flex-direction: column; align-items: stretch; gap: 8px; width: 100%; }
+.card-actions-row { width: 100%; }
+.card-actions-row-1 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; }
+.card-actions-row-1 .btn { min-height: 44px; width: 100%; justify-content: center; font-size: 13px; }
+.card-actions-row-2 { display: grid; grid-template-columns: 1fr auto; gap: 8px; width: 100%; align-items: center; }
+.card-actions-row-2 .btn-action-copy { min-height: 44px; width: 100%; justify-content: center; font-size: 13px; }
+.card-actions-row-2 .card-menu-wrap { flex-shrink: 0; }
+.card-actions-row-2 .card-menu-btn { min-height: 44px; min-width: 44px; width: 44px; display: grid; place-items: center; }
+
+
+
 .card-dropdown { right: 0; left: 0; width: 100%; }
 }
