@@ -43,12 +43,14 @@ export function confirmDialog({
 
   return new Promise((resolve) => {
     let resolved = false
+    let resultChosen = false
+    let chosenResult = false
 
     const handleResult = (val) => {
-      if (resolved) return
-      resolved = true
+      if (resolved || resultChosen) return
+      resultChosen = true
+      chosenResult = val
       modal.close()
-      resolve(val)
     }
 
     const bodyHtml = `
@@ -82,7 +84,8 @@ export function confirmDialog({
       onClose: () => {
         if (!resolved) {
           resolved = true
-          resolve(false)
+          // El historial ya consumió esta capa antes de que el consumidor abra otra.
+          resolve(chosenResult)
         }
       }
     })
@@ -99,6 +102,7 @@ export function confirmDialog({
 
     // Si es destructivo, enfocar el botón Cancelar por seguridad; si no, Confirmar
     setTimeout(() => {
+      if (resolved || resultChosen || !modal.el.isConnected || modal.el.closest('[inert]')) return
       if (destructive && cancelBtn) {
         cancelBtn.focus()
       } else if (submitBtn) {

@@ -21,7 +21,7 @@ Organizado en dos secciones principales:
   - **Catálogo de Servicios (`#productos`):** Base de datos de productos con precios sugeridos, costos sugeridos y categorías visuales.
   - **Proveedores (`#proveedores`):** Registro de proveedores con accesos a WhatsApp, Telegram, sitio web y herramienta de reasignación asistida (`merge_providers`).
   - **Plantillas WhatsApp (`#plantillas`):** Editor de mensajes de cobro, recordatorio, actualización y credenciales con inserción visual de variables dinámicas.
-  - **Acceso Rápido:** Botón destacado `+ Nueva suscripción` (`#nueva`).
+  - **Acceso Rápido:** Botón destacado `+ Nueva suscripción`, que abre el modal. Los hashes legados `#nueva` y `#nueva-suscripcion` abren ese modal sobre Suscripciones.
 
 ### Móvil (Bottom Navigation Bar ≤ 640px)
 Barra fija inferior optimizada para operación rápida con una sola mano:
@@ -41,13 +41,14 @@ Barra fija inferior optimizada para operación rápida con una sola mano:
 - **Acciones Directas:** Botones táctiles de alta visibilidad para *Renovar*, *Cobrar (WhatsApp)* y *Copiar todo*.
 - **Menú Extendido (⋯):** Enviar datos, Enviar actualización, Editar, Dar de baja / Recuperar, y Eliminar definitivo (rojo crítico con confirmación).
 - **Detalle Desplegable:** Despliega credenciales protegidas (usuario, contraseña con botón toggle, perfil, PIN, URL, costo, ganancia y notas).
+- **Responsive:** Tarjetas / Resumen permanece en escritorio. A ≤640 px se oculta el selector y se muestran tarjetas, sin perder la preferencia de escritorio.
 
 ### Formulario de Suscripción (`src/features/subscriptionForm.js`)
-Estructurado en 3 bloques lógicos con soporte modal o pantalla completa:
-1. **Cliente y Servicio:** Control combinado para buscar clientes existentes o crear nuevos inline con teléfono; selector de servicio del catálogo con autocompletado de precios y dominios de correo.
-2. **Accesos:** Usuario/correo con sugerencias de dominio, contraseña con toggle mostrar/ocultar, perfil, PIN y URL.
-3. **Fechas y Montos:** Fecha de inicio y vencimiento (con botones rápidos `+1m`, `+3m`, `+6m`, `+12m`), precios y costos en PEN o USDT, y selección de proveedor.
-- **Bloque Plegable "Más opciones":** Vencimiento del proveedor, campos extra y notas privadas.
+Crear y editar siempre usa modal de 560 px, con encabezado y pie visibles y solo cuerpo desplazable. Pantalla completa y una columna a ≤640 px. No existe página independiente de creación.
+1. **Cliente y Servicio:** Buscadores del mismo tipo; cliente existente o creación inline con teléfono; servicio del catálogo con autocompletado de precio, costo, duración y proveedor.
+2. **Duración y montos:** Chips de 1/3/6/12 meses, inicio hoy y vencimiento visible. «Cambiar fechas» despliega inicio y vencimiento. Precio de venta y Costo con moneda dentro del campo; Ganancia en una línea. Tipo de cambio y Equivalente aparecen solo para USDT.
+3. **Accesos:** Usuario/correo con sugerencias de dominio, contraseña con mostrar/ocultar, Perfil y PIN.
+- **Bloque plegable "Más detalles":** URL de acceso, Proveedor, Vencimiento del proveedor, Campos extra y Notas internas. Cerrado al crear; abierto al editar si tiene datos.
 - **Garantías:** Botón con estado "Guardando…", validaciones inline bajo los campos y clave de idempotencia única.
 
 ### Modal de Renovación (`src/features/renewModal.js`)
@@ -60,7 +61,19 @@ Estructurado en 3 bloques lógicos con soporte modal o pantalla completa:
 ---
 
 ## 4. Primitivas de UI Reutilizables (`src/ui/`)
-- **Modales (`ui/modal.js`):** Apertura modal con backdrop difuminado, tecla `Escape`, clic fuera, autoenfoque y bloqueo de scroll.
+- **Modales (`ui/modal.js`):** Crear/editar. Dos anchos: 420 px (cliente, confirmaciones, renovar) y 560 px (suscripción, producto, proveedor). Encabezado/pie visibles, cuerpo desplazable; pantalla completa a ≤640 px.
+- **Panel (`ui/panel.js`):** Consultar ficha de cliente, 440 px a la derecha o pantalla completa móvil. API `openPanel({ title, subtitle, body, footer, onClose }) → { el, close }`. Datos, contadores Vigentes/Vencen pronto/Vencidas y acciones Renovar/Cobrar/Ver. Editar abre el modal correspondiente.
+- **Capas e historial:** Aperturas añaden una entrada, Atrás cierra la capa superior conservando sección. Escape, Tab/Shift+Tab, foco restaurado y nombre accesible mediante `aria-labelledby`. No almacenar datos de clientes o credenciales en History API.
 - **Confirmaciones (`ui/confirm.js`):** Cuadro de diálogo asíncrono `confirmDialog()` que erradica por completo los `confirm()` y `alert()` nativos.
 - **Notificaciones (`ui/toast.js`):** Toasts dinámicos en esquina inferior con deduplicación y auto-dismiss.
 - **Iconografía (`ui/icons.js`):** Catálogo centralizado de SVG consistentes y escalables.
+
+## 5. Contrato visual y verificación
+
+`tokens.css` es la fuente de valores: controles 40 px / 44 px móvil, sm 32 px solo en tablas; tipografía 12/13/14/16/20/24 px con pesos 400/500/600; radios 8/12/999 px; espaciado exclusivamente con `--space-*`. `components.css` define controles, campos, buscadores, chips, badges con icono+texto, tarjetas, estadísticas, tablas, encabezados, toolbars, vacíos, modales y paneles. `layout.css` define el shell; las vistas solo añaden layout.
+
+Los estados `.is-invalid`, `.current`, `.filter-active` y `.cred-masked` tienen estilos reales. `scripts/verify/uniformity.mjs` comprueba literales y redefiniciones de controles en vistas; excepciones con `/* uniformity-ok: motivo */` en la misma línea.
+
+Antes de cada lote: `npm run check` y `npm run verify -- --strict`. La verificación visual usa Playwright local, Supabase interceptado, sesión y datos ficticios, con capturas 360×780 y 1280×860. Medir controles, scroll inicial del formulario, navegación Atrás, Escape y foco. Los resultados ejecutados y cualquier limitación se documentan en la evidencia del PR; el recorrido con cuenta real corresponde al propietario.
+
+Decisiones completas y criterios de cierre: [Spec 01](specs/01-reorganizacion-ux.md).

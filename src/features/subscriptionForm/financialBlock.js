@@ -23,30 +23,24 @@ export function createFinancialBlock(prefix, title, row) {
       <label for="${prefix}_price_input">${title}</label>
 
       <div class="financial-input-row">
-        <span class="currency-prefix" id="${prefix}_prefix">${isUsdt ? 'USDT' : 'S/'}</span>
         <input id="${prefix}_price_input" name="${prefix === 'sale' ? 'sale_price' : 'cost'}" type="number" inputmode="decimal" min="0" step="0.01" value="${price}" placeholder="0.00" autocomplete="off">
-
-        <div class="segmented-control" role="radiogroup">
+        <select id="${prefix}_currency_select" class="financial-currency-select" aria-label="Moneda de ${title.toLowerCase()}">
+          <option value="PEN" ${!isUsdt ? 'selected' : ''}>S/</option>
+          <option value="USDT" ${isUsdt ? 'selected' : ''}>USDT</option>
+        </select>
+        <div class="sub-hidden">
           <input type="radio" class="sr-only" id="${prefix}_pen" name="${prefix === 'sale' ? 'sale_price_currency' : 'cost_currency'}" value="PEN" ${!isUsdt ? 'checked' : ''}>
-          <label for="${prefix}_pen">PEN</label>
-
           <input type="radio" class="sr-only" id="${prefix}_usdt" name="${prefix === 'sale' ? 'sale_price_currency' : 'cost_currency'}" value="USDT" ${isUsdt ? 'checked' : ''}>
-          <label for="${prefix}_usdt">USDT</label>
         </div>
       </div>
 
       <div class="financial-subrow-grid">
-        <div id="${prefix}_pen_info" class="subrow-state state-pen ${!isUsdt ? 'active' : ''}">
-          <span>Equivalente</span>
-          <strong class="equiv-amount" id="${prefix}_equiv_pen">S/ 0.00</strong>
-        </div>
-
         <div id="${prefix}_usdt_info" class="subrow-state state-usdt ${isUsdt ? 'active' : ''}">
           <span class="tc-wrapper">
-            TC 1 USDT = S/
-            <input name="${prefix === 'sale' ? 'sale_price_exchange_rate' : 'cost_exchange_rate'}" type="number" class="tc-input" inputmode="decimal" step="0.0001" value="${rate}" placeholder="3.75">
+            <label for="${prefix}_exchange_rate">Tipo de cambio</label>
+            <input id="${prefix}_exchange_rate" name="${prefix === 'sale' ? 'sale_price_exchange_rate' : 'cost_exchange_rate'}" type="number" inputmode="decimal" step="0.0001" value="${rate}" placeholder="3.75">
           </span>
-          <strong class="equiv-amount" id="${prefix}_equiv_usdt">Ingresa el tipo de cambio</strong>
+          <span>Equivalente <strong class="equiv-amount" id="${prefix}_equiv_usdt">Ingresa el tipo de cambio</strong></span>
         </div>
       </div>
       ${prefix === 'cost' ? '<button type="button" id="copy_tc_btn" class="btn btn-small btn-ghost copy-tc-btn sub-hidden">Copiar TC de venta</button>' : ''}
@@ -66,11 +60,27 @@ export function bindFinancialEvents(form) {
   const costTCR = form.querySelector('input[name="cost_exchange_rate"]')
   const copyBtn = form.querySelector('#copy_tc_btn')
 
+  for (const prefix of ['sale', 'cost']) {
+    const select = form.querySelector(`#${prefix}_currency_select`)
+    const syncCurrency = event => {
+      const radio = form.querySelector(`#${prefix}_${event.target.value === 'USDT' ? 'usdt' : 'pen'}`)
+      if (radio) radio.checked = true
+      update()
+    }
+    // El input nativo precede a change: sincronizar antes del recálculo del form.
+    select?.addEventListener('input', syncCurrency)
+    select?.addEventListener('change', syncCurrency)
+  }
+
   function update() {
     const saleVal = Number(saleInput?.value) || 0
     const costVal = Number(costInput?.value) || 0
     const saleC = form.querySelector('input[name="sale_price_currency"]:checked')?.value || 'PEN'
     const costC = form.querySelector('input[name="cost_currency"]:checked')?.value || 'PEN'
+    const saleSelect = form.querySelector('#sale_currency_select')
+    const costSelect = form.querySelector('#cost_currency_select')
+    if (saleSelect) saleSelect.value = saleC
+    if (costSelect) costSelect.value = costC
 
     const salePrefix = form.querySelector('#sale_prefix')
     const costPrefix = form.querySelector('#cost_prefix')

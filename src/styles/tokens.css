@@ -9,9 +9,14 @@ Tokens: Geometry, Spacing Scale (4/8/12/16/20/24/32/40), Typography, Status Colo
   --sidebar-collapsed-width: 68px;
 
   /* Alturas de control (Spec 01 §4) */
-  --control-height-desktop: 36px;
-  --control-height-mobile: 44px;
-  --control-height-sm: 32px;
+  --control-h: 40px;
+  --control-h-sm: 32px;
+  --control-height-desktop: var(--control-h);
+  --control-height-mobile: var(--control-h);
+  --control-height-sm: var(--control-h-sm);
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
 
   /* Spacing Scale (4 / 8 / 12 / 16 / 20 / 24 / 32 / 40) - Spec 01 §4 */
   --space-1: 4px;
@@ -24,27 +29,27 @@ Tokens: Geometry, Spacing Scale (4/8/12/16/20/24/32/40), Typography, Status Colo
   --space-8: 40px;
 
   /* Aliases for compatibility */
-  --spacing-1: 4px;
-  --spacing-2: 8px;
-  --spacing-3: 12px;
-  --spacing-4: 16px;
-  --spacing-6: 24px;
-  --spacing-8: 32px;
+  --spacing-1: var(--space-1);
+  --spacing-2: var(--space-2);
+  --spacing-3: var(--space-3);
+  --spacing-4: var(--space-4);
+  --spacing-6: var(--space-6);
+  --spacing-8: var(--space-7);
 
   /* Geometry & Radii (Spec 01 §4) */
-  --radius-control: 6px;
-  --radius-card: 10px;
+  --radius-control: 8px;
+  --radius-card: 12px;
   --radius-pill: 999px;
-  --radius-xs: 4px;
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
-  --radius-cards: 10px;
-  --radius-inputs: 6px;
-  --radius-buttons: 6px;
-  --radius-badges: 6px;
-  --radius-pills: 999px;
+  --radius-xs: var(--radius-control);
+  --radius-sm: var(--radius-control);
+  --radius-md: var(--radius-control);
+  --radius-lg: var(--radius-card);
+  --radius-xl: var(--radius-card);
+  --radius-cards: var(--radius-card);
+  --radius-inputs: var(--radius-control);
+  --radius-buttons: var(--radius-control);
+  --radius-badges: var(--radius-control);
+  --radius-pills: var(--radius-pill);
 
   /* Typography Scale Tokens (Spec 01 §4) */
   --text-xs: 12px;
@@ -55,16 +60,16 @@ Tokens: Geometry, Spacing Scale (4/8/12/16/20/24/32/40), Typography, Status Colo
   --text-2xl: 24px;
 
   /* Aliases for compatibility */
-  --fs-h1: clamp(28px, 3.2vw, 34px);
-  --fs-h2: 21px;
-  --fs-h3: 17px;
-  --fs-kpi-val: 22px;
-  --fs-item-name: 15.5px;
-  --fs-body: 14px;
-  --fs-label: 13px;
-  --fs-desc: 13px;
-  --fs-meta: 12px;
-  --fs-small: 12px;
+  --fs-h1: var(--text-2xl);
+  --fs-h2: var(--text-xl);
+  --fs-h3: var(--text-lg);
+  --fs-kpi-val: var(--text-2xl);
+  --fs-item-name: var(--text-lg);
+  --fs-body: var(--text-md);
+  --fs-label: var(--text-sm);
+  --fs-desc: var(--text-sm);
+  --fs-meta: var(--text-xs);
+  --fs-small: var(--text-xs);
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
   /* Microinteractions & Transitions */
@@ -77,6 +82,10 @@ Tokens: Geometry, Spacing Scale (4/8/12/16/20/24/32/40), Typography, Status Colo
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
+}
+
+@media (max-width: 640px) {
+  :root { --control-h: 44px; }
 }
 
 /* ==========================================================================

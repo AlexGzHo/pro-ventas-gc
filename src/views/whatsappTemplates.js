@@ -68,7 +68,7 @@ export async function mountWhatsappTemplatesView(container, options = {}) {
 
   function render() {
     container.innerHTML = `
-      <section class="hero">
+      <section class="page-header">
         <div>
           <h2>Plantillas de WhatsApp</h2>
           <p>Personaliza los mensajes automatizados de cobro, accesos y actualización.</p>
@@ -85,7 +85,7 @@ export async function mountWhatsappTemplatesView(container, options = {}) {
 
       <div class="templates-view">
         <!-- Barra de Variables Disponibles Clicables -->
-        <div class="template-variables-card">
+        <div class="card template-variables-card">
           <div class="template-variables-header">
             <h3 class="template-variables-title">
               ${ICONS.messageSquare} Variables disponibles
@@ -94,7 +94,7 @@ export async function mountWhatsappTemplatesView(container, options = {}) {
           </div>
           <div class="template-variables-list" id="varsList">
             ${availableVariables.map(v => `
-              <button type="button" class="template-var-tag" data-tag="${v.tag}" title="${v.label}">
+              <button type="button" class="chip template-var-tag" data-tag="${v.tag}" title="${v.label}">
                 ${v.tag}
               </button>
             `).join('')}
@@ -102,33 +102,33 @@ export async function mountWhatsappTemplatesView(container, options = {}) {
         </div>
 
         <!-- Barra de Simulación de Escenarios -->
-        <div class="template-sim-card">
+        <div class="card template-sim-card">
           <span class="template-sim-label">
             ${ICONS.calendar} Simular fecha de vencimiento:
           </span>
           <div class="template-sim-buttons">
-            <button type="button" class="btn btn-small btn-ghost template-sim-btn active" data-offset="5">En 5 días</button>
-            <button type="button" class="btn btn-small btn-ghost template-sim-btn" data-offset="1">Mañana</button>
-            <button type="button" class="btn btn-small btn-ghost template-sim-btn" data-offset="0">Hoy</button>
-            <button type="button" class="btn btn-small btn-ghost template-sim-btn" data-offset="-1">Ayer</button>
-            <button type="button" class="btn btn-small btn-ghost template-sim-btn" data-offset="-3">Hace 3 días</button>
+            <button type="button" class="chip template-sim-btn active" data-offset="5" aria-pressed="true">En 5 días</button>
+            <button type="button" class="chip template-sim-btn" data-offset="1" aria-pressed="false">Mañana</button>
+            <button type="button" class="chip template-sim-btn" data-offset="0" aria-pressed="false">Hoy</button>
+            <button type="button" class="chip template-sim-btn" data-offset="-1" aria-pressed="false">Ayer</button>
+            <button type="button" class="chip template-sim-btn" data-offset="-3" aria-pressed="false">Hace 3 días</button>
           </div>
         </div>
 
         <!-- Grid de Plantillas -->
         <div class="templates-grid">
           <!-- Plantilla 1: Recordatorio -->
-          <article class="template-card">
+          <article class="card template-card">
             <div class="template-card-header">
               <div>
                 <h3 class="template-card-title">Plantilla de Recordatorio</h3>
                 <p class="template-card-desc">Se envía al presionar "Cobrar" o "WhatsApp" en las tablas de suscripciones.</p>
               </div>
-              <button type="button" class="btn btn-small btn-ghost btn-restore-single" data-tpl="reminder" title="Restaurar solo esta plantilla">
+              <button type="button" class="btn btn-ghost btn-restore-single" data-tpl="reminder" title="Restaurar solo esta plantilla" aria-label="Restaurar plantilla de recordatorio">
                 ${ICONS.restore}
               </button>
             </div>
-            <textarea id="tplReminder" class="template-textarea" rows="7" placeholder="Escribe tu mensaje..."></textarea>
+            <textarea id="tplReminder" class="form-control template-textarea" rows="7" placeholder="Escribe tu mensaje..." aria-label="Plantilla de recordatorio"></textarea>
             <div class="template-preview-wrapper">
               <span class="template-preview-label">Vista previa en vivo:</span>
               <div id="prevReminder" class="template-preview-box"></div>
@@ -136,17 +136,17 @@ export async function mountWhatsappTemplatesView(container, options = {}) {
           </article>
 
           <!-- Plantilla 2: Credenciales -->
-          <article class="template-card">
+          <article class="card template-card">
             <div class="template-card-header">
               <div>
                 <h3 class="template-card-title">Plantilla de Credenciales</h3>
                 <p class="template-card-desc">Se envía al compartir los accesos de una cuenta con el cliente.</p>
               </div>
-              <button type="button" class="btn btn-small btn-ghost btn-restore-single" data-tpl="credentials" title="Restaurar solo esta plantilla">
+              <button type="button" class="btn btn-ghost btn-restore-single" data-tpl="credentials" title="Restaurar solo esta plantilla" aria-label="Restaurar plantilla de credenciales">
                 ${ICONS.restore}
               </button>
             </div>
-            <textarea id="tplCredentials" class="template-textarea" rows="7" placeholder="Escribe tu mensaje..."></textarea>
+            <textarea id="tplCredentials" class="form-control template-textarea" rows="7" placeholder="Escribe tu mensaje..." aria-label="Plantilla de credenciales"></textarea>
             <div class="template-preview-wrapper">
               <span class="template-preview-label">Vista previa en vivo:</span>
               <div id="prevCredentials" class="template-preview-box"></div>
@@ -154,17 +154,17 @@ export async function mountWhatsappTemplatesView(container, options = {}) {
           </article>
 
           <!-- Plantilla 3: Actualización -->
-          <article class="template-card full-width">
+          <article class="card template-card full-width">
             <div class="template-card-header">
               <div>
                 <h3 class="template-card-title">Plantilla de Actualización</h3>
                 <p class="template-card-desc">Se envía al actualizar credenciales o datos de la cuenta existente.</p>
               </div>
-              <button type="button" class="btn btn-small btn-ghost btn-restore-single" data-tpl="update" title="Restaurar solo esta plantilla">
+              <button type="button" class="btn btn-ghost btn-restore-single" data-tpl="update" title="Restaurar solo esta plantilla" aria-label="Restaurar plantilla de actualización">
                 ${ICONS.restore}
               </button>
             </div>
-            <textarea id="tplUpdate" class="template-textarea" rows="6" placeholder="Escribe tu mensaje..."></textarea>
+            <textarea id="tplUpdate" class="form-control template-textarea" rows="6" placeholder="Escribe tu mensaje..." aria-label="Plantilla de actualización"></textarea>
             <div class="template-preview-wrapper">
               <span class="template-preview-label">Vista previa en vivo:</span>
               <div id="prevUpdate" class="template-preview-box"></div>
@@ -172,7 +172,7 @@ export async function mountWhatsappTemplatesView(container, options = {}) {
           </article>
         </div>
 
-        <div class="template-bottom-actions">
+        <div class="card template-bottom-actions">
           <button id="btnBottomSave" class="btn btn-primary" type="button">
             ${ICONS.check} Guardar Cambios
           </button>
@@ -235,8 +235,12 @@ export async function mountWhatsappTemplatesView(container, options = {}) {
     // Simulación de situaciones de vencimiento
     container.querySelectorAll('.template-sim-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        container.querySelectorAll('.template-sim-btn').forEach(b => b.classList.remove('active'))
+        container.querySelectorAll('.template-sim-btn').forEach(b => {
+          b.classList.remove('active')
+          b.setAttribute('aria-pressed', 'false')
+        })
         btn.classList.add('active')
+        btn.setAttribute('aria-pressed', 'true')
         const offset = parseInt(btn.dataset.offset, 10)
         const target = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset)
         dummyRow.expiry_date = toISODate(target)

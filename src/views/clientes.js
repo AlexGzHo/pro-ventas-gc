@@ -1,9 +1,13 @@
 import { supabase } from '../supabase.js'
 import { escapeHtml, formatDate, statusFor } from '../utils.js'
-import { parseWhatsAppContact, getWhatsAppUrl } from '../whatsapp.js'
+import { parseWhatsAppContact, getWhatsAppUrl, reminderText } from '../whatsapp.js'
 import { toast } from '../ui/toast.js'
 import { confirmDialog } from '../ui/confirm.js'
 import { openModal } from '../ui/modal.js'
+import { openPanel } from '../ui/panel.js'
+import { openRenewModal } from '../features/renewModal.js'
+import { safeWhatsapp } from '../features/subscriptionActions.js'
+import { rowById } from '../state.js'
 import { ICONS } from '../ui/icons.js'
 import { goToSubscription } from '../router.js'
 import { openClientMergeDialog } from '../ui/mergeDialog.js'
@@ -17,7 +21,7 @@ export async function mountClientesView(container, options = {}) {
   let searchTerm = ''
 
   container.innerHTML = `
-    <section class="hero">
+    <section class="page-header">
       <div>
         <h2>Clientes</h2>
         <p>Directorio y fichas individuales de clientes.</p>
@@ -140,7 +144,7 @@ export async function mountClientesView(container, options = {}) {
       const parsedContact = c.phone ? parseWhatsAppContact(c.phone) : null
       const wappLink = parsedContact && parsedContact.isValid ? getWhatsAppUrl(c.phone) : ''
       const isUserContact = parsedContact?.type === 'username' || (c.phone || '').startsWith('@')
-      const contactIcon = isUserContact ? '' : ICONS.phone
+      const contactIcon = isUserContact ? ICONS.whatsapp : ICONS.phone
 
       const logosToShow = c.activeSubs.slice(0, maxLogos)
       const extraCount = c.activeSubs.length > maxLogos ? c.activeSubs.length - maxLogos : 0
@@ -178,23 +182,23 @@ export async function mountClientesView(container, options = {}) {
         statusHtml = `
           <div class="client-card-footer">
             <span class="client-card-status-label">Próx. alerta:</span>
-            <span class="badge badge-${c.nearestStatus.tone}">${escapeHtml(c.nearestStatus.label)}</span>
+            <span class="badge badge-${c.nearestStatus.tone}">${c.nearestStatus.tone === 'danger' ? ICONS.error : c.nearestStatus.tone === 'warning' ? ICONS.warning : ICONS.success} ${escapeHtml(c.nearestStatus.label)}</span>
           </div>
         `
       }
 
       return `
-        <article class="client-card" data-id="${c.id}" role="button" tabindex="0">
+        <article class="card client-card" data-id="${c.id}" role="button" tabindex="0" aria-label="Ver ficha de ${escapeHtml(c.name)}">
           <div class="client-card-top">
             <h3 class="client-card-name" title="${escapeHtml(c.name)}">${escapeHtml(c.name)}</h3>
             <div class="client-card-actions">
-              <button type="button" class="btn btn-small btn-ghost btn-merge-client" data-id="${c.id}" title="Fusionar cliente" aria-label="Fusionar cliente">
+              <button type="button" class="btn btn-ghost btn-merge-client" data-id="${c.id}" title="Fusionar cliente" aria-label="Fusionar cliente">
                 ${ICONS.refresh}
               </button>
-              <button type="button" class="btn btn-small btn-ghost btn-edit-client" data-id="${c.id}" title="Editar cliente" aria-label="Editar cliente">
+              <button type="button" class="btn btn-ghost btn-edit-client" data-id="${c.id}" title="Editar cliente" aria-label="Editar cliente">
                 ${ICONS.edit}
               </button>
-              <button type="button" class="btn btn-small btn-ghost btn-delete-client" data-id="${c.id}" title="Eliminar cliente" aria-label="Eliminar cliente">
+              <button type="button" class="btn btn-ghost btn-delete-client" data-id="${c.id}" title="Eliminar cliente" aria-label="Eliminar cliente">
                 ${ICONS.trash}
               </button>
             </div>
@@ -205,7 +209,7 @@ export async function mountClientesView(container, options = {}) {
               <a href="${wappLink}" target="_blank" rel="noopener noreferrer" class="badge badge-success client-contact-link">
                 ${contactIcon} ${escapeHtml(c.phone)}
               </a>
-            ` : (c.phone ? `<span class="badge badge-neutral">${escapeHtml(c.phone)}</span>` : '<span class="text-muted">Sin contacto</span>')}
+            ` : (c.phone ? `<span class="badge badge-neutral">${contactIcon} ${escapeHtml(c.phone)}</span>` : '<span class="text-muted">Sin contacto</span>')}
           </div>
 
           ${c.notes ? `
@@ -221,12 +225,15 @@ export async function mountClientesView(container, options = {}) {
     }).join('')
   }
 
-  // --- Modal de Ficha de Cliente ---
-  function openClientProfileModal(clientId) {
-    const client = clientsData.find(c => c.id === clientId)
+  // --- Panel de consulta de Cliente ---
+  function openClientProfilePanel(clientId) {
+    let client = clientsData.find(c => c.id === clientId)
     if (!client) return
 
-    const cSubs = subsData.filter(s => s.client_id === clientId)
+    let cSubs = []
+    function renderProfileBody() {
+    client = clientsData.find(c => c.id === clientId) || client
+    cSubs = subsData.filter(s => s.client_id === clientId)
     const activeSubs = cSubs.filter(s => !s.archived_at)
     const archivedSubs = cSubs.filter(s => !!s.archived_at)
 
@@ -243,6 +250,10 @@ export async function mountClientesView(container, options = {}) {
 
     const totalActiveCount = activeSubs.length
     const expiredCount = activeSubs.filter(s => statusFor(s.expiry_date).key === 'vencido').length
+    const currentCount = activeSubs.filter(s => {
+      const days = statusFor(s.expiry_date).days
+      return days !== null && days >= 0
+    }).length
     const soonCount = activeSubs.filter(s => {
       const k = statusFor(s.expiry_date).key
       return k === 'proximo' || k === 'hoy'
@@ -282,7 +293,7 @@ export async function mountClientesView(container, options = {}) {
     const parsedContact = client.phone ? parseWhatsAppContact(client.phone) : null
     const wappLink = parsedContact && parsedContact.isValid ? getWhatsAppUrl(client.phone) : ''
     const isUserContact = parsedContact?.type === 'username' || (client.phone || '').startsWith('@')
-    const contactIcon = isUserContact ? '' : ICONS.phone
+    const contactIcon = isUserContact ? ICONS.whatsapp : ICONS.phone
 
     const renderSubRow = (s, isArchived = false) => {
       const st = statusFor(s.expiry_date, s.archived_at)
@@ -295,7 +306,7 @@ export async function mountClientesView(container, options = {}) {
         : `<span class="client-sub-logo-initials">${escapeHtml(initials)}</span>`
 
       return `
-        <div class="client-sub-item ${isArchived ? 'archived' : ''}">
+        <div class="card client-sub-item ${isArchived ? 'archived' : ''}">
           <div class="client-sub-item-main">
             ${logoEl}
             <div>
@@ -313,9 +324,18 @@ export async function mountClientesView(container, options = {}) {
               <div class="client-sub-expiry-date">${formatDate(isArchived ? s.archived_at : s.expiry_date)}</div>
             </div>
 
-            <span class="badge badge-${st.tone}">${escapeHtml(st.label)}</span>
-
-            <button type="button" class="btn btn-small btn-ghost btn-view-sub" data-sub-id="${s.id}" title="Ver en Suscripciones">
+            <span class="badge badge-${st.tone}">${isArchived ? ICONS.info : st.tone === 'danger' ? ICONS.error : st.tone === 'warning' ? ICONS.warning : ICONS.success} ${escapeHtml(st.label)}</span>
+          </div>
+          <div class="client-sub-actions">
+            ${!isArchived ? `
+              <button type="button" class="btn btn-secondary" data-client-action="renew" data-sub-id="${s.id}">
+                ${ICONS.refresh} Renovar
+              </button>
+              <button type="button" class="btn btn-secondary" data-client-action="charge" data-sub-id="${s.id}">
+                ${ICONS.whatsapp} Cobrar
+              </button>
+            ` : ''}
+            <button type="button" class="btn btn-ghost btn-view-sub" data-client-action="view" data-sub-id="${s.id}" title="Ver en Suscripciones">
               ${ICONS.search} Ver
             </button>
           </div>
@@ -323,9 +343,7 @@ export async function mountClientesView(container, options = {}) {
       `
     }
 
-    const bodyEl = document.createElement('div')
-    bodyEl.className = 'client-profile-content'
-    bodyEl.innerHTML = `
+    return `
       <div class="client-profile-hero">
         <div class="client-profile-header-info">
           <h3 class="client-profile-title">${escapeHtml(client.name)}</h3>
@@ -334,22 +352,22 @@ export async function mountClientesView(container, options = {}) {
               <a href="${wappLink}" target="_blank" rel="noopener noreferrer" class="badge badge-success client-contact-link">
                 ${contactIcon} ${escapeHtml(client.phone)}
               </a>
-            ` : (client.phone ? `<span class="badge badge-neutral">${escapeHtml(client.phone)}</span>` : '<span class="text-muted">Sin teléfono registrado</span>')}
+            ` : (client.phone ? `<span class="badge badge-neutral">${contactIcon} ${escapeHtml(client.phone)}</span>` : '<span class="text-muted">Sin teléfono registrado</span>')}
           </div>
           ${client.notes ? `<div class="client-profile-notes">${escapeHtml(client.notes)}</div>` : ''}
         </div>
       </div>
 
       <div class="client-profile-kpis">
-        <div class="client-kpi-box">
+        <div class="stat-card client-kpi-box">
           <div class="client-kpi-label">Vigentes</div>
-          <div class="client-kpi-val">${totalActiveCount}</div>
+          <div class="client-kpi-val">${currentCount}</div>
         </div>
-        <div class="client-kpi-box">
+        <div class="stat-card client-kpi-box">
           <div class="client-kpi-label">Vencen pronto</div>
           <div class="client-kpi-val ${soonCount > 0 ? 'warning' : ''}">${soonCount}</div>
         </div>
-        <div class="client-kpi-box">
+        <div class="stat-card client-kpi-box">
           <div class="client-kpi-label">Vencidas</div>
           <div class="client-kpi-val ${expiredCount > 0 ? 'danger' : ''}">${expiredCount}</div>
         </div>
@@ -359,11 +377,11 @@ export async function mountClientesView(container, options = {}) {
 
       <div class="client-subs-section">
         <h4 class="client-subs-section-title">
-          <span>Suscripciones Vigentes (${totalActiveCount})</span>
+          <span>Suscripciones sin archivar (${totalActiveCount})</span>
         </h4>
         ${activeSubs.length > 0
           ? activeSubs.map(s => renderSubRow(s, false)).join('')
-          : '<div class="empty-state">No hay suscripciones vigentes para este cliente.</div>'
+          : '<div class="empty-state">No hay suscripciones sin archivar para este cliente.</div>'
         }
       </div>
 
@@ -374,6 +392,11 @@ export async function mountClientesView(container, options = {}) {
         </div>
       ` : ''}
     `
+    }
+
+    const bodyEl = document.createElement('div')
+    bodyEl.className = 'client-profile-content'
+    bodyEl.innerHTML = renderProfileBody()
 
     const footerEl = document.createElement('div')
     footerEl.className = 'modal-actions'
@@ -383,24 +406,39 @@ export async function mountClientesView(container, options = {}) {
       <button type="button" class="btn btn-primary" id="btnProfileEdit">${ICONS.edit} Editar Cliente</button>
     `
 
-    const modal = openModal({
+    let afterClose = null
+    const panel = openPanel({
       title: 'Ficha de Cliente',
       subtitle: client.name,
       body: bodyEl,
       footer: footerEl,
-      size: 'lg',
-      customClass: 'client-profile-modal'
+      onClose: () => {
+        window.removeEventListener('pv-rows-loaded', refreshSubscriptions)
+        if (afterClose) afterClose()
+      }
     })
 
-    footerEl.querySelector('#btnProfileClose').addEventListener('click', () => modal.close())
+    function refreshProfile() {
+      bodyEl.innerHTML = renderProfileBody()
+      const subtitle = panel.el.querySelector('.panel-subtitle')
+      if (subtitle) subtitle.textContent = client.name
+    }
+
+    function refreshSubscriptions(event) {
+      if (!Array.isArray(event.detail?.rows)) return
+      subsData = event.detail.rows
+      renderList()
+      refreshProfile()
+    }
+    window.addEventListener('pv-rows-loaded', refreshSubscriptions)
+
+    footerEl.querySelector('#btnProfileClose').addEventListener('click', () => panel.close())
 
     footerEl.querySelector('#btnProfileEdit').addEventListener('click', () => {
-      modal.close()
-      openClientFormModal(clientId)
+      openClientFormModal(clientId, refreshProfile)
     })
 
     footerEl.querySelector('#btnProfileMerge').addEventListener('click', () => {
-      modal.close()
       openClientMergeDialog({
         primaryClientId: clientId,
         clients: clientsData,
@@ -408,23 +446,36 @@ export async function mountClientesView(container, options = {}) {
         onSuccess: async () => {
           await loadData()
           await notifyClientsChanged()
+          refreshProfile()
         }
       })
     })
 
-    bodyEl.querySelectorAll('.btn-view-sub').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const subId = btn.dataset.subId
-        if (subId) {
-          modal.close()
-          navigateToSub(subId)
-        }
-      })
+    bodyEl.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-client-action]')
+      if (!button) return
+      const subId = button.dataset.subId
+      const subscription = rowById(subId) || cSubs.find(s => String(s.id) === String(subId))
+      if (!subscription) return
+      const row = {
+        ...subscription,
+        client_name: client.name,
+        phone: client.phone,
+        service: subscription.product?.name || subscription.service
+      }
+      if (button.dataset.clientAction === 'renew') {
+        openRenewModal(row)
+      } else if (button.dataset.clientAction === 'charge') {
+        safeWhatsapp(row, reminderText(row))
+      } else {
+        afterClose = () => navigateToSub(subId)
+        panel.close()
+      }
     })
   }
 
   // --- Modal Formulario Crear / Editar Cliente ---
-  function openClientFormModal(clientId = null) {
+  function openClientFormModal(clientId = null, onSaved = null) {
     const isEditing = Boolean(clientId)
     const client = isEditing ? clientsData.find(c => c.id === clientId) : null
 
@@ -432,17 +483,17 @@ export async function mountClientesView(container, options = {}) {
     bodyEl.className = 'form-stack'
     bodyEl.id = 'clientForm'
     bodyEl.innerHTML = `
-      <label>
+      <label class="field">
         Nombre del cliente *
         <input type="text" id="clientNameInput" required class="form-control" value="${escapeHtml(client?.name || '')}" placeholder="Ej. Juan Pérez" />
       </label>
 
-      <label>
+      <label class="field">
         WhatsApp (Teléfono o @usuario)
         <input type="text" id="clientPhoneInput" class="form-control" value="${escapeHtml(client?.phone || '')}" placeholder="Ej. 987654321, +54 911... o @usuario" />
       </label>
 
-      <label>
+      <label class="field">
         Notas internas / preferencias
         <textarea id="clientNotesInput" class="form-control" rows="3" placeholder="Notas sobre el cliente...">${escapeHtml(client?.notes || '')}</textarea>
       </label>
@@ -462,7 +513,7 @@ export async function mountClientesView(container, options = {}) {
       subtitle: isEditing ? client.name : 'Ingresa los datos para registrar un nuevo cliente.',
       body: bodyEl,
       footer: footerEl,
-      size: 'md'
+      size: 'sm'
     })
 
     footerEl.querySelector('#btnCancelClientForm').addEventListener('click', () => modal.close())
@@ -507,6 +558,7 @@ export async function mountClientesView(container, options = {}) {
         modal.close()
         await loadData()
         await notifyClientsChanged()
+        if (onSaved) onSaved()
       } catch (err) {
         console.error('Error guardando cliente:', err)
         toast('Error al guardar: ' + err.message, 'error')
@@ -607,16 +659,17 @@ export async function mountClientesView(container, options = {}) {
 
     const card = e.target.closest('.client-card')
     if (card && card.dataset.id) {
-      openClientProfileModal(card.dataset.id)
+      openClientProfilePanel(card.dataset.id)
     }
   })
 
   // Enter en la tarjeta para accesibilidad con teclado
   container.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' || e.key === ' ') {
       const card = e.target.closest('.client-card')
       if (card && card.dataset.id && !e.target.closest('button, a')) {
-        openClientProfileModal(card.dataset.id)
+        e.preventDefault()
+        openClientProfilePanel(card.dataset.id)
       }
     }
   })
