@@ -2,6 +2,7 @@ import { supabase } from '../supabase.js'
 import {
   todayISO,
   addPeriod,
+  formatDate,
   normalizeCurrency
 } from '../utils.js'
 import { parseWhatsAppContact } from '../whatsapp.js'
@@ -20,6 +21,7 @@ import {
 } from './subscriptionForm/financialBlock.js'
 import { setupEmailGhost } from './subscriptionForm/emailGhost.js'
 import { setupClientCombo } from './subscriptionForm/clientCombo.js'
+import { setupProductCombo } from './subscriptionForm/productCombo.js'
 import { renderFormBodyHtml } from './subscriptionForm/formHtml.js'
 
 export { createFinancialBlock, bindFinancialEvents }
@@ -45,10 +47,13 @@ function setupSubscriptionFormLogic(rootEl, { row = null, onClose = null, onSucc
     const errEl = form.querySelector(`#error_${fieldId}`)
     if (errEl) errEl.textContent = errorMsg
 
-    const inputEl = form.querySelector(`#sub${fieldId.charAt(0).toUpperCase() + fieldId.slice(1)}`) ||
+    const searchId = fieldId === 'product' ? 'subProductSearchInput' : fieldId === 'client' ? 'subClientSearchInput' : null
+    const inputEl = (searchId && form.querySelector(`#${searchId}`)) || form.querySelector(`#sub${fieldId.charAt(0).toUpperCase() + fieldId.slice(1)}`) ||
                     form.querySelector(`[name="${fieldId}"]`)
     if (inputEl) {
       inputEl.classList.add('is-invalid')
+      inputEl.setAttribute('aria-invalid', 'true')
+      inputEl.setAttribute('aria-describedby', `error_${fieldId}`)
       const details = inputEl.closest('details')
       if (details) details.open = true
     }
@@ -57,14 +62,21 @@ function setupSubscriptionFormLogic(rootEl, { row = null, onClose = null, onSucc
   function clearFieldError(fieldId) {
     const errEl = form.querySelector(`#error_${fieldId}`)
     if (errEl) errEl.textContent = ''
-    const inputEl = form.querySelector(`#sub${fieldId.charAt(0).toUpperCase() + fieldId.slice(1)}`) ||
+    const searchId = fieldId === 'product' ? 'subProductSearchInput' : fieldId === 'client' ? 'subClientSearchInput' : null
+    const inputEl = (searchId && form.querySelector(`#${searchId}`)) || form.querySelector(`#sub${fieldId.charAt(0).toUpperCase() + fieldId.slice(1)}`) ||
                     form.querySelector(`[name="${fieldId}"]`)
-    if (inputEl) inputEl.classList.remove('is-invalid')
+    if (inputEl) {
+      inputEl.classList.remove('is-invalid')
+      inputEl.removeAttribute('aria-invalid')
+    }
   }
 
   function clearAllErrors() {
     form.querySelectorAll('.sub-field-error').forEach(el => el.textContent = '')
-    form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'))
+    form.querySelectorAll('.is-invalid').forEach(el => {
+      el.classList.remove('is-invalid')
+      el.removeAttribute('aria-invalid')
+    })
   }
 
   // 1. Selector combinado de cliente
@@ -83,6 +95,19 @@ function setupSubscriptionFormLogic(rootEl, { row = null, onClose = null, onSucc
   const startDateInput = form.querySelector('#subStartDate')
   const expiryDateInput = form.querySelector('#subExpiryDate')
   const quickPeriodBtns = form.querySelectorAll('.sub-period-btn')
+  const productController = setupProductCombo(form, state.products || [])
+
+  function updateExpirySummary() {
+    const summary = form.querySelector('#subExpirySummary')
+    if (summary) summary.textContent = `Vence el ${formatDate(expiryDateInput.value)}`
+    quickPeriodBtns.forEach(button => {
+      const selected = expiryDateInput.value === addPeriod(startDateInput.value || todayISO(), { months: Number(button.dataset.months) })
+      button.classList.toggle('current', selected)
+      button.setAttribute('aria-pressed', String(selected))
+    })
+  }
+  form.addEventListener('input', updateExpirySummary)
+  updateExpirySummary()
 
   // 3. Password toggle
   const pwdInput = form.querySelector('#subPasswordInput')
@@ -92,6 +117,8 @@ function setupSubscriptionFormLogic(rootEl, { row = null, onClose = null, onSucc
     togglePwdBtn.addEventListener('click', () => {
       isPwdVisible = !isPwdVisible
       pwdInput.type = isPwdVisible ? 'text' : 'password'
+      togglePwdBtn.setAttribute('aria-pressed', String(isPwdVisible))
+      togglePwdBtn.setAttribute('aria-label', isPwdVisible ? 'Ocultar contraseña' : 'Mostrar contraseña')
     })
   }
 
@@ -227,7 +254,7 @@ function setupSubscriptionFormLogic(rootEl, { row = null, onClose = null, onSucc
     const prodId = productSelect.value
     if (!prodId) {
       showFieldError('product', 'Debes seleccionar un servicio o producto.')
-      productSelect.focus()
+      productController.focus()
       return
     }
 
@@ -236,18 +263,21 @@ function setupSubscriptionFormLogic(rootEl, { row = null, onClose = null, onSucc
 
     if (!startDate) {
       showFieldError('start_date', 'La fecha de inicio es requerida.')
+      form.querySelector('#subDateDetails').open = true
       startDateInput.focus()
       return
     }
 
     if (!expiryDate) {
       showFieldError('expiry_date', 'La fecha de vencimiento es obligatoria.')
+      form.querySelector('#subDateDetails').open = true
       expiryDateInput.focus()
       return
     }
 
     if (startDate && expiryDate && new Date(expiryDate) < new Date(startDate)) {
       showFieldError('expiry_date', 'La fecha de vencimiento no puede ser anterior a la fecha de inicio.')
+      form.querySelector('#subDateDetails').open = true
       expiryDateInput.focus()
       return
     }
@@ -267,7 +297,7 @@ function setupSubscriptionFormLogic(rootEl, { row = null, onClose = null, onSucc
     }
 
     if (costVal < 0) {
-      showFieldError('cost', 'El costo mayorista no puede ser negativo.')
+      showFieldError('cost', 'El costo no puede ser negativo.')
       costInput.focus()
       return
     }
@@ -417,6 +447,7 @@ function setupSubscriptionFormLogic(rootEl, { row = null, onClose = null, onSucc
   })
 
   bindFinancialEvents(form)
+  return () => clientController.destroy()
 }
 
 /**
@@ -435,6 +466,7 @@ export function openSubscriptionFormModal(row = null) {
     : ''
 
   const hasMoreOptionsData = Boolean(
+    row?.access_url || row?.provider_id ||
     row?.provider_expiry_date ||
     (extrasText && extrasText.trim()) ||
     (row?.notes && String(row.notes).trim())
@@ -443,27 +475,27 @@ export function openSubscriptionFormModal(row = null) {
   const bodyHtml = renderFormBodyHtml(row, products, providers, extrasText, hasMoreOptionsData)
   const footerHtml = `
     <div class="sub-form-footer">
-      <button type="button" id="subCancelBtn" class="btn btn-outline">Cancelar</button>
+      <button type="button" id="subCancelBtn" class="btn btn-secondary">Cancelar</button>
       <button type="button" id="subSaveBtn" class="btn btn-primary">
-        ${isEditing ? 'Guardar cambios' : 'Registrar suscripción'}
+        ${isEditing ? 'Guardar cambios' : 'Guardar suscripción'}
       </button>
     </div>
   `
 
   const modal = openModal({
     title: isEditing ? 'Editar suscripción' : 'Nueva suscripción',
-    subtitle: isEditing ? 'Modifica los datos del servicio, credenciales o vigencia.' : 'Registra una suscripción asignando cliente, servicio y credenciales.',
     body: bodyHtml,
     footer: footerHtml,
-    size: 'lg',
+    size: 'md',
     customClass: 'sub-form-modal',
     onClose: () => {
+      cleanup?.()
       state.editingRowData = null
       state.editingId = null
     }
   })
 
-  setupSubscriptionFormLogic(modal.el, {
+  const cleanup = setupSubscriptionFormLogic(modal.el, {
     row,
     onClose: () => modal.close(),
     onSuccess: () => modal.close()

@@ -17,8 +17,8 @@ import { ICONS } from '../../ui/icons.js'
  */
 export function renderClientControlHtml(row = null) {
   return `
-    <div class="sub-form-field">
-      <label>Cliente <span class="sub-req">*</span></label>
+    <div class="sub-form-field field">
+      <label for="subClientSearchInput">Cliente <span class="sub-req">*</span></label>
       <div class="sub-client-control" id="subClientControl">
         <!-- Tarjeta de cliente seleccionado -->
         <div id="subClientCard" class="sub-client-card sub-hidden">
@@ -34,12 +34,12 @@ export function renderClientControlHtml(row = null) {
 
         <!-- Buscador combinado de cliente -->
         <div id="subClientSearchWrap" class="sub-client-search-wrap">
-          <div class="sub-client-search-field">
-            <span class="sub-client-search-icon">${ICONS.search}</span>
-            <input type="text" id="subClientSearchInput" class="sub-client-search-input" placeholder="Buscar o crear cliente (nombre o WhatsApp)..." autocomplete="off">
-            <button type="button" id="subClientClearBtn" class="sub-client-clear-btn sub-hidden" title="Limpiar búsqueda">${ICONS.close}</button>
+          <div class="search-box sub-client-search-field">
+            <span class="sub-client-search-icon" aria-hidden="true">${ICONS.search}</span>
+            <input type="search" id="subClientSearchInput" placeholder="Buscar o crear cliente" autocomplete="off" aria-expanded="false" aria-controls="subClientDropdown">
+            <button type="button" id="subClientClearBtn" class="btn btn-ghost sub-client-clear-btn sub-hidden" aria-label="Limpiar búsqueda">${ICONS.close}</button>
           </div>
-          <div id="subClientDropdown" class="sub-client-dropdown sub-hidden" role="listbox"></div>
+          <div id="subClientDropdown" class="sub-client-dropdown sub-hidden"></div>
         </div>
 
         <!-- Formulario inline para nuevo cliente -->
@@ -69,7 +69,7 @@ export function renderClientControlHtml(row = null) {
         </div>
 
         <input type="hidden" name="client_id" id="subClientIdHidden" value="${row?.client_id || ''}">
-        <div class="sub-field-error" id="error_client"></div>
+        <div class="sub-field-error" id="error_client" aria-live="polite"></div>
       </div>
     </div>
   `
@@ -168,6 +168,7 @@ export function setupClientCombo(rootEl, {
     isCreatingInline = false
     if (clientSearchInput) clientSearchInput.value = ''
     clientDropdown?.classList.add('sub-hidden')
+    clientSearchInput?.setAttribute('aria-expanded', 'false')
     updateClientUI()
   }
 
@@ -187,6 +188,7 @@ export function setupClientCombo(rootEl, {
 
     if (matches.length === 0 && !q) {
       clientDropdown.classList.add('sub-hidden')
+      clientSearchInput.setAttribute('aria-expanded', 'false')
       return
     }
 
@@ -196,16 +198,16 @@ export function setupClientCombo(rootEl, {
       html += matches.map((c, idx) => {
         const count = getActiveSubsCount(c.id)
         return `
-          <div class="sub-client-dropdown-item" data-id="${c.id}" data-idx="${idx}" role="option">
+          <button type="button" class="btn btn-ghost sub-client-dropdown-item" data-id="${c.id}" data-idx="${idx}">
             <div class="sub-dropdown-item-info">
               <span class="sub-dropdown-item-name">${escapeHtml(c.name)}</span>
               <span class="sub-dropdown-item-contact">${c.phone ? escapeHtml(c.phone) : 'Sin teléfono'}</span>
             </div>
             <div class="sub-dropdown-item-meta">
               <span class="sub-dropdown-item-badge">${count} sub(s)</span>
-              <button type="button" class="btn btn-small btn-ghost">Elegir</button>
+              <span>Elegir</span>
             </div>
-          </div>
+          </button>
         `
       }).join('')
     }
@@ -213,15 +215,16 @@ export function setupClientCombo(rootEl, {
     // Opción para crear cliente con el texto escrito
     if (q.length >= 2) {
       html += `
-        <div class="sub-dropdown-create-item" data-action="create-new" role="button">
+        <button type="button" class="btn btn-ghost sub-dropdown-create-item" data-action="create-new">
           ${ICONS.plus || ''}
-          <span>Crear cliente "<strong>${escapeHtml(q)}</strong>" (desplegar teléfono)</span>
-        </div>
+          <span>Crear cliente «<strong>${escapeHtml(q)}</strong>»</span>
+        </button>
       `
     }
 
     clientDropdown.innerHTML = html
     clientDropdown.classList.remove('sub-hidden')
+    clientSearchInput.setAttribute('aria-expanded', 'true')
   }
 
   function checkClientDuplicates() {
@@ -267,7 +270,7 @@ export function setupClientCombo(rootEl, {
     duplicateList.innerHTML = matches.map(c => `
       <div class="sub-duplicate-item">
         <span>• <strong>${escapeHtml(c.name)}</strong> ${c.phone ? `(${escapeHtml(c.phone)})` : ''}</span>
-        <button type="button" class="sub-duplicate-use-btn" data-id="${c.id}">
+        <button type="button" class="btn btn-secondary sub-duplicate-use-btn" data-id="${c.id}">
           Usar este cliente
         </button>
       </div>
@@ -293,10 +296,29 @@ export function setupClientCombo(rootEl, {
     renderClientSearchResults()
   })
 
+  clientSearchInput?.addEventListener('keydown', event => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      if (clientDropdown.classList.contains('sub-hidden')) renderClientSearchResults()
+      clientDropdown.querySelector('button')?.focus()
+    }
+    if (event.key === 'Escape' && !clientDropdown.classList.contains('sub-hidden')) {
+      event.preventDefault()
+      event.stopPropagation()
+      clientDropdown.classList.add('sub-hidden')
+      clientSearchInput.setAttribute('aria-expanded', 'false')
+    }
+    if (event.key === 'Enter' && !clientDropdown.classList.contains('sub-hidden')) {
+      event.preventDefault()
+      clientDropdown.querySelector('button')?.click()
+    }
+  })
+
   clientClearBtn?.addEventListener('click', () => {
     clientSearchInput.value = ''
     clientClearBtn.classList.add('sub-hidden')
     clientDropdown?.classList.add('sub-hidden')
+    clientSearchInput.setAttribute('aria-expanded', 'false')
     clientSearchInput.focus()
   })
 
@@ -350,8 +372,15 @@ export function setupClientCombo(rootEl, {
   const handleDocumentClick = (e) => {
     if (!e.target.closest('#subClientSearchWrap')) {
       clientDropdown?.classList.add('sub-hidden')
+      clientSearchInput?.setAttribute('aria-expanded', 'false')
     }
   }
+  clientSearchWrap?.addEventListener('focusout', (event) => {
+    if (!clientSearchWrap.contains(event.relatedTarget)) {
+      clientDropdown?.classList.add('sub-hidden')
+      clientSearchInput?.setAttribute('aria-expanded', 'false')
+    }
+  })
   document.addEventListener('click', handleDocumentClick)
 
   updateClientUI()

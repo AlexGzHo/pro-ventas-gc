@@ -61,12 +61,12 @@ export function openRenewModal(row) {
       <div class="renew-section">
         <label class="renew-section-label">Duración</label>
         <div class="renew-chips-grid">
-          <button type="button" class="renew-chip" data-period="7 days" data-days="7" data-months="0">+ 7 días</button>
-          <button type="button" class="renew-chip" data-period="15 days" data-days="15" data-months="0">+ 15 días</button>
-          <button type="button" class="renew-chip" data-period="1 month" data-days="0" data-months="1">+ 1 mes</button>
-          <button type="button" class="renew-chip" data-period="3 months" data-days="0" data-months="3">+ 3 meses</button>
-          <button type="button" class="renew-chip" data-period="6 months" data-days="0" data-months="6">+ 6 meses</button>
-          <button type="button" class="renew-chip" data-period="12 months" data-days="0" data-months="12">+ 12 meses</button>
+          <button type="button" class="chip renew-chip" data-period="7 days" data-days="7" data-months="0">+ 7 días</button>
+          <button type="button" class="chip renew-chip" data-period="15 days" data-days="15" data-months="0">+ 15 días</button>
+          <button type="button" class="chip renew-chip" data-period="1 month" data-days="0" data-months="1">+ 1 mes</button>
+          <button type="button" class="chip renew-chip" data-period="3 months" data-days="0" data-months="3">+ 3 meses</button>
+          <button type="button" class="chip renew-chip" data-period="6 months" data-days="0" data-months="6">+ 6 meses</button>
+          <button type="button" class="chip renew-chip" data-period="12 months" data-days="0" data-months="12">+ 12 meses</button>
         </div>
       </div>
 
