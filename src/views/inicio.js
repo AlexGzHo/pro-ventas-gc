@@ -363,7 +363,7 @@ export function renderInicioHtml(rows = []) {
 
   return `
     <div class="inicio-view">
-      <section class="hero inicio-hero">
+      <section class="page-header inicio-hero">
         <div>
           <h2>Inicio</h2>
           <p>Prioridades del día y estado financiero del negocio.</p>
@@ -483,7 +483,7 @@ function renderAttentionItemHtml(row) {
           <span class="inicio-attention-expiry">
             ${ICONS.calendar} Vence: ${expiry}
           </span>
-          <span class="badge badge-${status.tone}">${statusText}</span>
+          <span class="badge badge-${status.tone}"><span aria-hidden="true">${isOverdue ? ICONS.warning : ICONS.clock}</span>${statusText}</span>
         </div>
       </div>
       <div class="inicio-attention-actions">

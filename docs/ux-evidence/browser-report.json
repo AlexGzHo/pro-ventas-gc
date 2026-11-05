@@ -1,0 +1,1159 @@
+{
+  "generatedAt": "2026-11-05T02:14:27.227Z",
+  "phase": "L6",
+  "baseURL": "http://127.0.0.1:5173",
+  "output": "/tmp/proventas-ux-cierre-verificado",
+  "syntheticData": true,
+  "cases": [
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 860
+      },
+      "name": "inicio",
+      "status": "captured",
+      "hash": "#inicio",
+      "path": "/tmp/proventas-ux-cierre-verificado/1280-inicio.png",
+      "measurements": {
+        "horizontalOverflow": false,
+        "controlCount": 14,
+        "controlIssues": [],
+        "dialogWidth": null,
+        "dialogClass": null,
+        "modalWidth": null,
+        "modalHeight": null,
+        "modalBodyClientHeight": null,
+        "modalBodyScrollHeight": null,
+        "formHeight": null
+      }
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 860
+      },
+      "name": "suscripciones-tarjetas",
+      "status": "captured",
+      "hash": "#suscripciones",
+      "path": "/tmp/proventas-ux-cierre-verificado/1280-suscripciones-tarjetas.png",
+      "measurements": {
+        "horizontalOverflow": false,
+        "controlCount": 27,
+        "controlIssues": [],
+        "dialogWidth": null,
+        "dialogClass": null,
+        "modalWidth": null,
+        "modalHeight": null,
+        "modalBodyClientHeight": null,
+        "modalBodyScrollHeight": null,
+        "formHeight": null
+      }
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 860
+      },
+      "name": "suscripciones-resumen",
+      "status": "captured",
+      "hash": "#suscripciones",
+      "path": "/tmp/proventas-ux-cierre-verificado/1280-suscripciones-resumen.png",
+      "measurements": {
+        "horizontalOverflow": false,
+        "controlCount": 24,
+        "controlIssues": [],
+        "dialogWidth": null,
+        "dialogClass": null,
+        "modalWidth": null,
+        "modalHeight": null,
+        "modalBodyClientHeight": null,
+        "modalBodyScrollHeight": null,
+        "formHeight": null
+      }
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 860
+      },
+      "name": "suscripciones-menu-resumen",
+      "status": "captured",
+      "hash": "#suscripciones",
+      "path": "/tmp/proventas-ux-cierre-verificado/1280-suscripciones-menu-resumen.png",
+      "measurements": {
+        "horizontalOverflow": false,
+        "controlCount": 30,
+        "controlIssues": [],
+        "dialogWidth": null,
+        "dialogClass": null,
+        "modalWidth": null,
+        "modalHeight": null,
+        "modalBodyClientHeight": null,
+        "modalBodyScrollHeight": null,
+        "formHeight": null
+      }
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 860
+      },
+      "name": "nueva-suscripcion-inicial",
+      "status": "captured",
+      "hash": "#suscripciones",
+      "path": "/tmp/proventas-ux-cierre-verificado/1280-nueva-suscripcion-inicial.png",
+      "measurements": {
+        "horizontalOverflow": false,
+        "controlCount": 47,
+        "controlIssues": [],
+        "dialogWidth": 560,
+        "dialogClass": "modal modal-md sub-form-modal",
+        "modalWidth": 560,
+        "modalHeight": 748.5,
+        "modalBodyClientHeight": 601,
+        "modalBodyScrollHeight": 601,
+        "formHeight": 568.5
+      }
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 860
+      },
+      "name": "nueva-suscripcion-fechas",
+      "status": "captured",
+      "hash": "#suscripciones",
+      "path": "/tmp/proventas-ux-cierre-verificado/1280-nueva-suscripcion-fechas.png",
+      "measurements": {
+        "horizontalOverflow": false,
+        "controlCount": 47,
+        "controlIssues": [],
+        "dialogWidth": 560,
+        "dialogClass": "modal modal-md sub-form-modal",
+        "modalWidth": 560,
+        "modalHeight": 824,
+        "modalBodyClientHeight": 676,
+        "modalBodyScrollHeight": 676,
+        "formHeight": 644
+      }
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 860
+      },
+      "name": "nueva-suscripcion-detalles",
+      "status": "captured",
+      "hash": "#suscripciones",
+      "path": "/tmp/proventas-ux-cierre-verificado/1280-nueva-suscripcion-detalles.png",
+      "measurements": {
+        "horizontalOverflow": false,
+        "controlCount": 47,
+        "controlIssues": [],
+        "dialogWidth": 560,
+        "dialogClass": "modal modal-md sub-form-modal",
+        "modalWidth": 560,
+        "modalHeight": 828,
+        "modalBodyClientHeight": 680,
+        "modalBodyScrollHeight": 1150,
+        "formHeight": 1117.5
+      }
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 860
+      },
+      "name": "nueva-suscripcion-usdt",
+      "status": "captured",
+      "hash": "#suscripciones",
+      "path": "/tmp/proventas-ux-cierre-verificado/1280-nueva-suscripcion-usdt.png",
+      "measurements": {
+        "horizontalOverflow": false,
+        "controlCount": 48,
+        "controlIssues": [],
+        "dialogWidth": 560,
+        "dialogClass": "modal modal-md sub-form-modal",
+        "modalWidth": 560,
+        "modalHeight": 828,
+        "modalBodyClientHeight": 680,
+        "modalBodyScrollHeight": 1243,
+        "formHeight": 1211
+      }
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 860
+      },
+      "name": "modal-teclado-etiqueta",
+      "status": "passed",
+      "role": "dialog",
+      "labelled": true,
+      "forwardWrapped": true,
+      "backwardWrapped": true
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 860
+      },
+      "name": "modal-atras",
+      "status": "passed"
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 860
+      },
+      "name": "clientes",
+      "status": "captured",
+      "hash": "#clientes",
+      "path": "/tmp/proventas-ux-cierre-verificado/1280-clientes.png",
+      "measurements": {
+        "horizontalOverflow": false,
+        "controlCount": 10,
+        "controlIssues": [],
+        "dialogWidth": null,
+        "dialogClass": null,
+        "modalWidth": null,
+        "modalHeight": null,
+        "modalBodyClientHeight": null,
+        "modalBodyScrollHeight": null,
+        "formHeight": null
+      }
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 860
+      },
+      "name": "cliente-panel",
+      "status": "captured",
+      "hash": "#clientes",
+      "path": "/tmp/proventas-ux-cierre-verificado/1280-cliente-panel.png",
+      "measurements": {
+        "horizontalOverflow": false,
+        "controlCount": 23,
+        "controlIssues": [],
+        "dialogWidth": 440,
+        "dialogClass": "panel",
+        "modalWidth": null,
+        "modalHeight": null,
+        "modalBodyClientHeight": null,
+        "modalBodyScrollHeight": null,
+        "formHeight": null
+      }
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 860
+      },
+      "name": "panel-teclado-etiqueta",
+      "status": "passed",
+      "role": "dialog",
+      "labelled": true,
+      "forwardWrapped": true,
+      "backwardWrapped": true
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 860
+      },
+      "name": "panel-editar-escape",
+      "status": "passed",
+      "panelRemains": true,
+      "focusRestored": true
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 860
+      },
+      "name": "panel-atras-foco",
+      "status": "passed",
+      "focusRestored": true
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 860
+      },
+      "name": "catalogo",
+      "status": "captured",
+      "hash": "#productos",
+      "path": "/tmp/proventas-ux-cierre-verificado/1280-catalogo.png",
+      "measurements": {
+        "horizontalOverflow": false,
+        "controlCount": 11,
+        "controlIssues": [],
+        "dialogWidth": null,
+        "dialogClass": null,
+        "modalWidth": null,
+        "modalHeight": null,
+        "modalBodyClientHeight": null,
+        "modalBodyScrollHeight": null,
+        "formHeight": null
+      }
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 860
+      },
+      "name": "producto-modal",
+      "status": "captured",
+      "hash": "#productos",
+      "path": "/tmp/proventas-ux-cierre-verificado/1280-producto-modal.png",
+      "measurements": {
+        "horizontalOverflow": false,
+        "controlCount": 22,
+        "controlIssues": [],
+        "dialogWidth": 560,
+        "dialogClass": "modal modal-md",
+        "modalWidth": null,
+        "modalHeight": null,
+        "modalBodyClientHeight": null,
+        "modalBodyScrollHeight": null,
+        "formHeight": null
+      }
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 860
+      },
+      "name": "proveedores",
+      "status": "captured",
+      "hash": "#proveedores",
+      "path": "/tmp/proventas-ux-cierre-verificado/1280-proveedores.png",
+      "measurements": {
+        "horizontalOverflow": false,
+        "controlCount": 7,
+        "controlIssues": [],
+        "dialogWidth": null,
+        "dialogClass": null,
+        "modalWidth": null,
+        "modalHeight": null,
+        "modalBodyClientHeight": null,
+        "modalBodyScrollHeight": null,
+        "formHeight": null
+      }
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 860
+      },
+      "name": "proveedor-modal",
+      "status": "captured",
+      "hash": "#proveedores",
+      "path": "/tmp/proventas-ux-cierre-verificado/1280-proveedor-modal.png",
+      "measurements": {
+        "horizontalOverflow": false,
+        "controlCount": 14,
+        "controlIssues": [],
+        "dialogWidth": 560,
+        "dialogClass": "modal modal-md",
+        "modalWidth": null,
+        "modalHeight": null,
+        "modalBodyClientHeight": null,
+        "modalBodyScrollHeight": null,
+        "formHeight": null
+      }
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 860
+      },
+      "name": "plantillas",
+      "status": "captured",
+      "hash": "#whatsapp-templates",
+      "path": "/tmp/proventas-ux-cierre-verificado/1280-plantillas.png",
+      "measurements": {
+        "horizontalOverflow": false,
+        "controlCount": 25,
+        "controlIssues": [],
+        "dialogWidth": null,
+        "dialogClass": null,
+        "modalWidth": null,
+        "modalHeight": null,
+        "modalBodyClientHeight": null,
+        "modalBodyScrollHeight": null,
+        "formHeight": null
+      }
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 860
+      },
+      "name": "hash-legado-nueva-suscripcion-modal",
+      "status": "passed",
+      "section": "#suscripciones",
+      "listRemains": true
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 860
+      },
+      "name": "formulario-validacion-autocompletar-moneda",
+      "status": "passed"
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 860
+      },
+      "name": "preferencia-escritorio-tras-redimensionar",
+      "status": "passed"
+    },
+    {
+      "viewport": {
+        "width": 360,
+        "height": 780
+      },
+      "name": "inicio",
+      "status": "captured",
+      "hash": "#inicio",
+      "path": "/tmp/proventas-ux-cierre-verificado/360-inicio.png",
+      "measurements": {
+        "horizontalOverflow": false,
+        "controlCount": 16,
+        "controlIssues": [],
+        "dialogWidth": null,
+        "dialogClass": null,
+        "modalWidth": null,
+        "modalHeight": null,
+        "modalBodyClientHeight": null,
+        "modalBodyScrollHeight": null,
+        "formHeight": null
+      }
+    },
+    {
+      "viewport": {
+        "width": 360,
+        "height": 780
+      },
+      "name": "suscripciones-tarjetas",
+      "status": "captured",
+      "hash": "#suscripciones",
+      "path": "/tmp/proventas-ux-cierre-verificado/360-suscripciones-tarjetas.png",
+      "measurements": {
+        "horizontalOverflow": false,
+        "controlCount": 27,
+        "controlIssues": [],
+        "dialogWidth": null,
+        "dialogClass": null,
+        "modalWidth": null,
+        "modalHeight": null,
+        "modalBodyClientHeight": null,
+        "modalBodyScrollHeight": null,
+        "formHeight": null
+      }
+    },
+    {
+      "viewport": {
+        "width": 360,
+        "height": 780
+      },
+      "name": "suscripciones-resumen-preferencia-movil",
+      "status": "captured",
+      "hash": "#suscripciones",
+      "path": "/tmp/proventas-ux-cierre-verificado/360-suscripciones-resumen-preferencia-movil.png",
+      "measurements": {
+        "horizontalOverflow": false,
+        "controlCount": 27,
+        "controlIssues": [],
+        "dialogWidth": null,
+        "dialogClass": null,
+        "modalWidth": null,
+        "modalHeight": null,
+        "modalBodyClientHeight": null,
+        "modalBodyScrollHeight": null,
+        "formHeight": null
+      }
+    },
+    {
+      "viewport": {
+        "width": 360,
+        "height": 780
+      },
+      "name": "nueva-suscripcion-inicial",
+      "status": "captured",
+      "hash": "#suscripciones",
+      "path": "/tmp/proventas-ux-cierre-verificado/360-nueva-suscripcion-inicial.png",
+      "measurements": {
+        "horizontalOverflow": false,
+        "controlCount": 50,
+        "controlIssues": [],
+        "dialogWidth": 360,
+        "dialogClass": "modal modal-md sub-form-modal",
+        "modalWidth": 360,
+        "modalHeight": 780,
+        "modalBodyClientHeight": 626,
+        "modalBodyScrollHeight": 875,
+        "formHeight": 843
+      }
+    },
+    {
+      "viewport": {
+        "width": 360,
+        "height": 780
+      },
+      "name": "nueva-suscripcion-fechas",
+      "status": "captured",
+      "hash": "#suscripciones",
+      "path": "/tmp/proventas-ux-cierre-verificado/360-nueva-suscripcion-fechas.png",
+      "measurements": {
+        "horizontalOverflow": false,
+        "controlCount": 50,
+        "controlIssues": [],
+        "dialogWidth": 360,
+        "dialogClass": "modal modal-md sub-form-modal",
+        "modalWidth": 360,
+        "modalHeight": 780,
+        "modalBodyClientHeight": 626,
+        "modalBodyScrollHeight": 1038,
+        "formHeight": 1006
+      }
+    },
+    {
+      "viewport": {
+        "width": 360,
+        "height": 780
+      },
+      "name": "nueva-suscripcion-detalles",
+      "status": "captured",
+      "hash": "#suscripciones",
+      "path": "/tmp/proventas-ux-cierre-verificado/360-nueva-suscripcion-detalles.png",
+      "measurements": {
+        "horizontalOverflow": false,
+        "controlCount": 50,
+        "controlIssues": [],
+        "dialogWidth": 360,
+        "dialogClass": "modal modal-md sub-form-modal",
+        "modalWidth": 360,
+        "modalHeight": 780,
+        "modalBodyClientHeight": 626,
+        "modalBodyScrollHeight": 1540,
+        "formHeight": 1507.5
+      }
+    },
+    {
+      "viewport": {
+        "width": 360,
+        "height": 780
+      },
+      "name": "nueva-suscripcion-usdt",
+      "status": "captured",
+      "hash": "#suscripciones",
+      "path": "/tmp/proventas-ux-cierre-verificado/360-nueva-suscripcion-usdt.png",
+      "measurements": {
+        "horizontalOverflow": false,
+        "controlCount": 51,
+        "controlIssues": [],
+        "dialogWidth": 360,
+        "dialogClass": "modal modal-md sub-form-modal",
+        "modalWidth": 360,
+        "modalHeight": 780,
+        "modalBodyClientHeight": 626,
+        "modalBodyScrollHeight": 1637,
+        "formHeight": 1605
+      }
+    },
+    {
+      "viewport": {
+        "width": 360,
+        "height": 780
+      },
+      "name": "modal-teclado-etiqueta",
+      "status": "passed",
+      "role": "dialog",
+      "labelled": true,
+      "forwardWrapped": true,
+      "backwardWrapped": true
+    },
+    {
+      "viewport": {
+        "width": 360,
+        "height": 780
+      },
+      "name": "modal-atras",
+      "status": "passed"
+    },
+    {
+      "viewport": {
+        "width": 360,
+        "height": 780
+      },
+      "name": "clientes",
+      "status": "captured",
+      "hash": "#clientes",
+      "path": "/tmp/proventas-ux-cierre-verificado/360-clientes.png",
+      "measurements": {
+        "horizontalOverflow": false,
+        "controlCount": 12,
+        "controlIssues": [],
+        "dialogWidth": null,
+        "dialogClass": null,
+        "modalWidth": null,
+        "modalHeight": null,
+        "modalBodyClientHeight": null,
+        "modalBodyScrollHeight": null,
+        "formHeight": null
+      }
+    },
+    {
+      "viewport": {
+        "width": 360,
+        "height": 780
+      },
+      "name": "cliente-panel",
+      "status": "captured",
+      "hash": "#clientes",
+      "path": "/tmp/proventas-ux-cierre-verificado/360-cliente-panel.png",
+      "measurements": {
+        "horizontalOverflow": false,
+        "controlCount": 25,
+        "controlIssues": [],
+        "dialogWidth": 360,
+        "dialogClass": "panel",
+        "modalWidth": null,
+        "modalHeight": null,
+        "modalBodyClientHeight": null,
+        "modalBodyScrollHeight": null,
+        "formHeight": null
+      }
+    },
+    {
+      "viewport": {
+        "width": 360,
+        "height": 780
+      },
+      "name": "panel-teclado-etiqueta",
+      "status": "passed",
+      "role": "dialog",
+      "labelled": true,
+      "forwardWrapped": true,
+      "backwardWrapped": true
+    },
+    {
+      "viewport": {
+        "width": 360,
+        "height": 780
+      },
+      "name": "panel-editar-escape",
+      "status": "passed",
+      "panelRemains": true,
+      "focusRestored": true
+    },
+    {
+      "viewport": {
+        "width": 360,
+        "height": 780
+      },
+      "name": "panel-atras-foco",
+      "status": "passed",
+      "focusRestored": true
+    },
+    {
+      "viewport": {
+        "width": 360,
+        "height": 780
+      },
+      "name": "catalogo",
+      "status": "captured",
+      "hash": "#productos",
+      "path": "/tmp/proventas-ux-cierre-verificado/360-catalogo.png",
+      "measurements": {
+        "horizontalOverflow": false,
+        "controlCount": 13,
+        "controlIssues": [],
+        "dialogWidth": null,
+        "dialogClass": null,
+        "modalWidth": null,
+        "modalHeight": null,
+        "modalBodyClientHeight": null,
+        "modalBodyScrollHeight": null,
+        "formHeight": null
+      }
+    },
+    {
+      "viewport": {
+        "width": 360,
+        "height": 780
+      },
+      "name": "producto-modal",
+      "status": "captured",
+      "hash": "#productos",
+      "path": "/tmp/proventas-ux-cierre-verificado/360-producto-modal.png",
+      "measurements": {
+        "horizontalOverflow": false,
+        "controlCount": 24,
+        "controlIssues": [],
+        "dialogWidth": 360,
+        "dialogClass": "modal modal-md",
+        "modalWidth": null,
+        "modalHeight": null,
+        "modalBodyClientHeight": null,
+        "modalBodyScrollHeight": null,
+        "formHeight": null
+      }
+    },
+    {
+      "viewport": {
+        "width": 360,
+        "height": 780
+      },
+      "name": "proveedores",
+      "status": "captured",
+      "hash": "#proveedores",
+      "path": "/tmp/proventas-ux-cierre-verificado/360-proveedores.png",
+      "measurements": {
+        "horizontalOverflow": false,
+        "controlCount": 9,
+        "controlIssues": [],
+        "dialogWidth": null,
+        "dialogClass": null,
+        "modalWidth": null,
+        "modalHeight": null,
+        "modalBodyClientHeight": null,
+        "modalBodyScrollHeight": null,
+        "formHeight": null
+      }
+    },
+    {
+      "viewport": {
+        "width": 360,
+        "height": 780
+      },
+      "name": "proveedor-modal",
+      "status": "captured",
+      "hash": "#proveedores",
+      "path": "/tmp/proventas-ux-cierre-verificado/360-proveedor-modal.png",
+      "measurements": {
+        "horizontalOverflow": false,
+        "controlCount": 16,
+        "controlIssues": [],
+        "dialogWidth": 360,
+        "dialogClass": "modal modal-md",
+        "modalWidth": null,
+        "modalHeight": null,
+        "modalBodyClientHeight": null,
+        "modalBodyScrollHeight": null,
+        "formHeight": null
+      }
+    },
+    {
+      "viewport": {
+        "width": 360,
+        "height": 780
+      },
+      "name": "plantillas",
+      "status": "captured",
+      "hash": "#whatsapp-templates",
+      "path": "/tmp/proventas-ux-cierre-verificado/360-plantillas.png",
+      "measurements": {
+        "horizontalOverflow": false,
+        "controlCount": 27,
+        "controlIssues": [],
+        "dialogWidth": null,
+        "dialogClass": null,
+        "modalWidth": null,
+        "modalHeight": null,
+        "modalBodyClientHeight": null,
+        "modalBodyScrollHeight": null,
+        "formHeight": null
+      }
+    },
+    {
+      "viewport": {
+        "width": 360,
+        "height": 780
+      },
+      "name": "hash-legado-nueva-suscripcion-modal",
+      "status": "passed",
+      "section": "#suscripciones",
+      "listRemains": true
+    },
+    {
+      "viewport": {
+        "width": 360,
+        "height": 780
+      },
+      "name": "formulario-validacion-autocompletar-moneda",
+      "status": "passed"
+    },
+    {
+      "viewport": {
+        "width": 360,
+        "height": 780
+      },
+      "name": "preferencia-escritorio-tras-redimensionar",
+      "status": "passed"
+    }
+  ],
+  "errors": [],
+  "blockedExternalRequests": [],
+  "networkWrites": [],
+  "assertions": [
+    {
+      "viewport": 1280,
+      "name": "inicio:sin-desborde-horizontal",
+      "passed": true
+    },
+    {
+      "viewport": 1280,
+      "name": "inicio:alturas-controles",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "viewport": 1280,
+      "name": "suscripciones-tarjetas:sin-desborde-horizontal",
+      "passed": true
+    },
+    {
+      "viewport": 1280,
+      "name": "suscripciones-tarjetas:alturas-controles",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "viewport": 1280,
+      "name": "suscripciones-resumen:sin-desborde-horizontal",
+      "passed": true
+    },
+    {
+      "viewport": 1280,
+      "name": "suscripciones-resumen:alturas-controles",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "viewport": 1280,
+      "name": "suscripciones-menu-resumen:sin-desborde-horizontal",
+      "passed": true
+    },
+    {
+      "viewport": 1280,
+      "name": "suscripciones-menu-resumen:alturas-controles",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "viewport": 1280,
+      "name": "nueva-suscripcion-inicial:sin-desborde-horizontal",
+      "passed": true
+    },
+    {
+      "viewport": 1280,
+      "name": "nueva-suscripcion-inicial:alturas-controles",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "viewport": 1280,
+      "name": "nueva-suscripcion-inicial:scroll",
+      "passed": true,
+      "measurements": {
+        "horizontalOverflow": false,
+        "controlCount": 47,
+        "controlIssues": [],
+        "dialogWidth": 560,
+        "dialogClass": "modal modal-md sub-form-modal",
+        "modalWidth": 560,
+        "modalHeight": 748.5,
+        "modalBodyClientHeight": 601,
+        "modalBodyScrollHeight": 601,
+        "formHeight": 568.5
+      }
+    },
+    {
+      "viewport": 1280,
+      "name": "nueva-suscripcion-fechas:sin-desborde-horizontal",
+      "passed": true
+    },
+    {
+      "viewport": 1280,
+      "name": "nueva-suscripcion-fechas:alturas-controles",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "viewport": 1280,
+      "name": "nueva-suscripcion-detalles:sin-desborde-horizontal",
+      "passed": true
+    },
+    {
+      "viewport": 1280,
+      "name": "nueva-suscripcion-detalles:alturas-controles",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "viewport": 1280,
+      "name": "nueva-suscripcion-usdt:sin-desborde-horizontal",
+      "passed": true
+    },
+    {
+      "viewport": 1280,
+      "name": "nueva-suscripcion-usdt:alturas-controles",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "viewport": 1280,
+      "name": "clientes:sin-desborde-horizontal",
+      "passed": true
+    },
+    {
+      "viewport": 1280,
+      "name": "clientes:alturas-controles",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "viewport": 1280,
+      "name": "cliente-panel:sin-desborde-horizontal",
+      "passed": true
+    },
+    {
+      "viewport": 1280,
+      "name": "cliente-panel:alturas-controles",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "viewport": 1280,
+      "name": "catalogo:sin-desborde-horizontal",
+      "passed": true
+    },
+    {
+      "viewport": 1280,
+      "name": "catalogo:alturas-controles",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "viewport": 1280,
+      "name": "producto-modal:sin-desborde-horizontal",
+      "passed": true
+    },
+    {
+      "viewport": 1280,
+      "name": "producto-modal:alturas-controles",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "viewport": 1280,
+      "name": "proveedores:sin-desborde-horizontal",
+      "passed": true
+    },
+    {
+      "viewport": 1280,
+      "name": "proveedores:alturas-controles",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "viewport": 1280,
+      "name": "proveedor-modal:sin-desborde-horizontal",
+      "passed": true
+    },
+    {
+      "viewport": 1280,
+      "name": "proveedor-modal:alturas-controles",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "viewport": 1280,
+      "name": "plantillas:sin-desborde-horizontal",
+      "passed": true
+    },
+    {
+      "viewport": 1280,
+      "name": "plantillas:alturas-controles",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "viewport": 360,
+      "name": "inicio:sin-desborde-horizontal",
+      "passed": true
+    },
+    {
+      "viewport": 360,
+      "name": "inicio:alturas-controles",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "viewport": 360,
+      "name": "suscripciones-tarjetas:sin-desborde-horizontal",
+      "passed": true
+    },
+    {
+      "viewport": 360,
+      "name": "suscripciones-tarjetas:alturas-controles",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "viewport": 360,
+      "name": "suscripciones-resumen-preferencia-movil:sin-desborde-horizontal",
+      "passed": true
+    },
+    {
+      "viewport": 360,
+      "name": "suscripciones-resumen-preferencia-movil:alturas-controles",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "viewport": 360,
+      "name": "nueva-suscripcion-inicial:sin-desborde-horizontal",
+      "passed": true
+    },
+    {
+      "viewport": 360,
+      "name": "nueva-suscripcion-inicial:alturas-controles",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "viewport": 360,
+      "name": "nueva-suscripcion-inicial:scroll",
+      "passed": true,
+      "measurements": {
+        "horizontalOverflow": false,
+        "controlCount": 50,
+        "controlIssues": [],
+        "dialogWidth": 360,
+        "dialogClass": "modal modal-md sub-form-modal",
+        "modalWidth": 360,
+        "modalHeight": 780,
+        "modalBodyClientHeight": 626,
+        "modalBodyScrollHeight": 875,
+        "formHeight": 843
+      }
+    },
+    {
+      "viewport": 360,
+      "name": "nueva-suscripcion-fechas:sin-desborde-horizontal",
+      "passed": true
+    },
+    {
+      "viewport": 360,
+      "name": "nueva-suscripcion-fechas:alturas-controles",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "viewport": 360,
+      "name": "nueva-suscripcion-detalles:sin-desborde-horizontal",
+      "passed": true
+    },
+    {
+      "viewport": 360,
+      "name": "nueva-suscripcion-detalles:alturas-controles",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "viewport": 360,
+      "name": "nueva-suscripcion-usdt:sin-desborde-horizontal",
+      "passed": true
+    },
+    {
+      "viewport": 360,
+      "name": "nueva-suscripcion-usdt:alturas-controles",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "viewport": 360,
+      "name": "clientes:sin-desborde-horizontal",
+      "passed": true
+    },
+    {
+      "viewport": 360,
+      "name": "clientes:alturas-controles",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "viewport": 360,
+      "name": "cliente-panel:sin-desborde-horizontal",
+      "passed": true
+    },
+    {
+      "viewport": 360,
+      "name": "cliente-panel:alturas-controles",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "viewport": 360,
+      "name": "catalogo:sin-desborde-horizontal",
+      "passed": true
+    },
+    {
+      "viewport": 360,
+      "name": "catalogo:alturas-controles",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "viewport": 360,
+      "name": "producto-modal:sin-desborde-horizontal",
+      "passed": true
+    },
+    {
+      "viewport": 360,
+      "name": "producto-modal:alturas-controles",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "viewport": 360,
+      "name": "proveedores:sin-desborde-horizontal",
+      "passed": true
+    },
+    {
+      "viewport": 360,
+      "name": "proveedores:alturas-controles",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "viewport": 360,
+      "name": "proveedor-modal:sin-desborde-horizontal",
+      "passed": true
+    },
+    {
+      "viewport": 360,
+      "name": "proveedor-modal:alturas-controles",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "viewport": 360,
+      "name": "plantillas:sin-desborde-horizontal",
+      "passed": true
+    },
+    {
+      "viewport": 360,
+      "name": "plantillas:alturas-controles",
+      "passed": true,
+      "issues": []
+    }
+  ]
+}

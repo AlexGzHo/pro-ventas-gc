@@ -28,7 +28,7 @@
 .summary-client-cell { display: flex; flex-direction: column; gap: var(--space-1); }
 .summary-service-cell { display: flex; align-items: center; gap: var(--space-2); }
 .summary-service-meta { display: flex; flex-direction: column; }
-.summary-actions-cell { display: flex; align-items: center; gap: var(--space-2); }
+.summary-actions-cell { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); }
 @media (max-width: 640px) {
   .grid { grid-template-columns: 1fr; }
   .subs-header { align-items: stretch; }
