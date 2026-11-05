@@ -1,14 +1,8 @@
 import {
   state,
-  loadRows,
-  loadProducts,
-  loadClients,
-  loadProviders,
   reloadProviders,
   reloadProducts,
   reloadClients,
-  invalidateServiceCache,
-  invalidateEmailDomainCache,
   onRowsLoaded
 } from './state.js'
 import { toast } from './ui/toast.js'
@@ -19,7 +13,20 @@ import { mountClientesView } from './views/clientes.js'
 import { mountProductosView } from './views/productos.js'
 import { mountProveedoresView } from './views/proveedores.js'
 import { mountWhatsappTemplatesView } from './views/whatsappTemplates.js'
-import { mountSubscriptionForm as mountSubscriptionFormView } from './features/subscriptionForm.js'
+import { openSubscriptionForm } from './features/subscriptionForm.js'
+import { closeAllOverlays } from './ui/overlay.js'
+
+const FORM_HASHES = ['#nueva-suscripcion', '#nueva', '#editar-suscripcion', '#editar']
+
+function openLegacyFormHash() {
+  const hash = window.location.hash.toLowerCase()
+  if (!FORM_HASHES.includes(hash)) return
+  const editingRow = hash === '#editar-suscripcion' || hash === '#editar'
+    ? state.editingRowData : null
+  // La URL base pertenece a la lista; el modal añade su propia entrada al historial.
+  history.replaceState(history.state, '', '#suscripciones')
+  void openSubscriptionForm(editingRow)
+}
 
 export const ROUTES = {
   inicio: {
@@ -33,46 +40,9 @@ export const ROUTES = {
   },
   subscriptions: {
     hash: '#suscripciones',
-    aliases: ['#suscripciones', '#subscriptions'],
+    aliases: ['#suscripciones', '#subscriptions', ...FORM_HASHES],
     mount: (container) => {
       renderSubscriptionsSection(container)
-    }
-  },
-  subscriptionForm: {
-    hash: () => (state.editingId ? '#editar-suscripcion' : '#nueva-suscripcion'),
-    aliases: ['#nueva-suscripcion', '#nueva', '#editar-suscripcion', '#editar'],
-    mount: (container) => {
-      mountSubscriptionFormView(container, {
-        row: state.editingRowData,
-        toast,
-        confirmModal,
-        alertModal,
-        products: state.products,
-        clients: state.clients,
-        providers: state.providers,
-        rows: state.rows,
-        loadProducts,
-        loadClients,
-        loadProviders,
-        reloadProviders,
-        reloadProducts,
-        reloadClients,
-        invalidateCache: () => {
-          invalidateServiceCache()
-          invalidateEmailDomainCache()
-        },
-        onCancel: () => {
-          state.editingRowData = null
-          state.editingId = null
-          navigateToSection('subscriptions')
-        },
-        onSuccess: async () => {
-          state.editingRowData = null
-          state.editingId = null
-          navigateToSection('subscriptions')
-          await loadRows()
-        }
-      })
     }
   },
   clientes: {
@@ -116,7 +86,7 @@ export const ROUTES = {
   },
   whatsappTemplates: {
     hash: '#whatsapp-templates',
-    aliases: ['#whatsapp-templates', '#whatsapp'],
+    aliases: ['#whatsapp-templates', '#whatsapp', '#plantillas'],
     mount: (container) => {
       mountWhatsappTemplatesView(container, { toast, confirmModal, alertModal })
     }
@@ -139,9 +109,7 @@ export function findSectionByHash(hash) {
 
 export function updateSidebarActiveNav() {
   document.querySelectorAll('#appSidebar .nav-item').forEach((item) => {
-    const isTarget =
-      item.dataset.nav === state.currentSection ||
-      (state.currentSection === 'subscriptionForm' && item.dataset.nav === 'subscriptions')
+    const isTarget = item.dataset.nav === state.currentSection
 
     item.classList.toggle('active', isTarget)
     if (isTarget) {
@@ -158,10 +126,18 @@ export function renderCurrentSection() {
 
   const route = ROUTES[state.currentSection] || ROUTES.inicio
   route.mount(container)
+  openLegacyFormHash()
 }
 
 export function navigateToSection(sectionName, updateHash = true) {
-  if (state.currentSection === sectionName && !state.highlightRowId) return
+  if (state.currentSection === sectionName && !state.highlightRowId) {
+    openLegacyFormHash()
+    return
+  }
+  const closingOverlays = closeAllOverlays()
+  if (closingOverlays) {
+    return closingOverlays.then(() => navigateToSection(sectionName, updateHash))
+  }
   state.currentSection = sectionName
 
   if (updateHash) {
@@ -200,10 +176,6 @@ export function setupRouter() {
 
   window.addEventListener('hashchange', () => {
     const section = findSectionByHash(window.location.hash)
-    if (section === 'subscriptionForm' && (window.location.hash === '#nueva-suscripcion' || window.location.hash === '#nueva')) {
-      state.editingRowData = null
-      state.editingId = null
-    }
     navigateToSection(section, false)
   })
 
