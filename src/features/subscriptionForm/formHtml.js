@@ -19,7 +19,7 @@ export function renderFormBodyHtml(row, products, providers, extrasText, hasMore
           ${[1, 3, 6, 12].map(months => `<button type="button" class="chip sub-period-btn" data-months="${months}" aria-pressed="false">${months} ${months === 1 ? 'mes' : 'meses'}</button>`).join('')}
         </div>
         <details class="sub-date-details" id="subDateDetails">
-          <summary><span id="subExpirySummary">Vence el ${formatDate(defaultExpiryDate)}</span> · Cambiar fechas</summary>
+          <summary><span><span id="subExpirySummary">Vence el ${formatDate(defaultExpiryDate)}</span> · Cambiar fechas</span><span class="sub-collapsible-chevron" aria-hidden="true">${ICONS.chevronDown}</span></summary>
           <div class="sub-form-grid-2 sub-date-fields">
             <div class="sub-form-field field">
               <label for="subStartDate">Inicio <span class="sub-req">*</span></label>

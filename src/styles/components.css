@@ -255,6 +255,7 @@ body.overlay-open { overflow: hidden; }
   .page-header, .hero { flex-direction: column; align-items: stretch; gap: var(--space-3); }
   .page-header > .btn, .hero > .btn { width: 100%; }
   .toolbar { flex-wrap: wrap; gap: var(--space-2); }
+  .subs-toolbar-row .search-box:has(.search-clear.hidden) input[type="search"] { padding-right: var(--space-3); }
   .filter-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
   .filter-select { min-width: 0; width: 100%; }
   .results-bar { align-items: flex-start; }
@@ -297,13 +298,15 @@ body.overlay-open { overflow: hidden; }
 .sub-password-wrap { position: relative; display: flex; align-items: center; width: 100%; }
 .sub-password-wrap input { padding-right: calc(var(--control-h) + var(--space-2)); }
 .sub-password-toggle { position: absolute; right: 0; width: var(--control-h); }
-.sub-date-details summary { color: var(--text-muted); font-size: var(--text-sm); cursor: pointer; }
+.sub-date-details summary { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); color: var(--text-muted); font-size: var(--text-sm); cursor: pointer; list-style: none; }
+.sub-date-details summary::-webkit-details-marker { display: none; }
 .sub-collapsible-block { border-top: 1px solid var(--border-subtle); }
 .sub-collapsible-summary { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); padding: var(--space-2) 0; cursor: pointer; list-style: none; }
 .sub-collapsible-summary::-webkit-details-marker { display: none; }
 .sub-collapsible-title { font-size: var(--text-sm); font-weight: 600; color: var(--text-primary); }
 .sub-collapsible-chevron { display: flex; color: var(--text-muted); transition: transform var(--transition-fast); }
-.sub-collapsible-block[open] .sub-collapsible-chevron { transform: rotate(180deg); }
+.sub-collapsible-block[open] .sub-collapsible-chevron,
+.sub-date-details[open] .sub-collapsible-chevron { transform: rotate(180deg); }
 .sub-collapsible-body { display: flex; flex-direction: column; gap: var(--space-3); padding-top: var(--space-2); }
 .sub-profit-line { font-size: var(--text-sm); color: var(--text-muted); }
 .sub-profit-positive { color: var(--status-success-text); }
