@@ -17,7 +17,7 @@ export async function mountProveedoresView(container, options = {}) {
   let searchTerm = ''
 
   container.innerHTML = `
-    <section class="hero">
+    <section class="page-header">
       <div>
         <h2>Proveedores</h2>
         <p>Directorio de proveedores y enlaces funcionales.</p>
@@ -41,7 +41,7 @@ export async function mountProveedoresView(container, options = {}) {
       </div>
 
       <div class="summary-view-wrapper">
-        <table class="summary-table">
+        <table class="data-table summary-table">
           <thead>
             <tr>
               <th>Proveedor</th>
@@ -141,7 +141,7 @@ export async function mountProveedoresView(container, options = {}) {
           <td>
             ${p.website ? `
               <a href="${escapeHtml(p.website)}" target="_blank" rel="noopener noreferrer" class="badge badge-neutral provider-link-badge">
-                Sitio web
+                ${ICONS.search} Sitio web
               </a>
             ` : '<span class="text-muted">—</span>'}
           </td>
@@ -150,18 +150,18 @@ export async function mountProveedoresView(container, options = {}) {
               <a href="${waLink}" target="_blank" rel="noopener noreferrer" class="badge badge-success provider-link-badge">
                 ${ICONS.phone} ${escapeHtml(waLabel)}
               </a>
-            ` : (p.whatsapp ? `<span class="badge badge-neutral">${escapeHtml(p.whatsapp)}</span>` : '<span class="text-muted">—</span>')}
+            ` : (p.whatsapp ? `<span class="badge badge-neutral">${ICONS.phone} ${escapeHtml(p.whatsapp)}</span>` : '<span class="text-muted">—</span>')}
           </td>
           <td>
             ${tgLink ? `
-              <a href="${escapeHtml(tgLink)}" target="_blank" rel="noopener noreferrer" class="badge provider-badge-telegram provider-link-badge">
-                Telegram
+              <a href="${escapeHtml(tgLink)}" target="_blank" rel="noopener noreferrer" class="badge badge-neutral provider-link-badge">
+                ${ICONS.messageSquare} Telegram
               </a>
-            ` : (p.telegram ? `<span class="badge badge-neutral">${escapeHtml(p.telegram)}</span>` : '<span class="text-muted">—</span>')}
+            ` : (p.telegram ? `<span class="badge badge-neutral">${ICONS.messageSquare} ${escapeHtml(p.telegram)}</span>` : '<span class="text-muted">—</span>')}
           </td>
           <td>
             <span class="badge badge-neutral provider-deps-badge">
-              ${depSubs} sub(s) • ${depProds} prod(s)
+              ${ICONS.subscriptions} ${depSubs} sub(s) • ${depProds} prod(s)
             </span>
           </td>
           <td>
@@ -191,29 +191,29 @@ export async function mountProveedoresView(container, options = {}) {
     bodyEl.className = 'form-stack'
     bodyEl.id = 'providerForm'
     bodyEl.innerHTML = `
-      <label>
+      <label class="field">
         Nombre del proveedor *
         <input type="text" id="provNameInput" required class="form-control" value="${escapeHtml(provider?.name || '')}" placeholder="Ej. Proveedor XYZ" />
       </label>
 
       <div class="provider-form-row">
-        <label>
+        <label class="field">
           Website
           <input type="url" id="provWebsiteInput" class="form-control" value="${escapeHtml(provider?.website || '')}" placeholder="https://..." />
         </label>
 
-        <label>
+        <label class="field">
           WhatsApp (Teléfono o @usuario)
           <input type="text" id="provWhatsappInput" class="form-control" value="${escapeHtml(provider?.whatsapp || '')}" placeholder="Ej. 987654321, +1... o @usuario" />
         </label>
 
-        <label>
+        <label class="field">
           Telegram
           <input type="text" id="provTelegramInput" class="form-control" value="${escapeHtml(provider?.telegram || '')}" placeholder="@usuario o URL" />
         </label>
       </div>
 
-      <label>
+      <label class="field">
         Notas / Condiciones del proveedor
         <textarea id="provNotesInput" class="form-control" rows="3" placeholder="Información de contacto adicional, reglas, garantías...">${escapeHtml(provider?.notes || '')}</textarea>
       </label>

@@ -17,7 +17,7 @@ export async function mountProductosView(container, options = {}) {
   let selectedStatus = 'TODOS'
 
   container.innerHTML = `
-    <section class="hero">
+    <section class="page-header">
       <div>
         <h2>Catálogo de Productos</h2>
         <p>Servicios, precios base sugeridos y proveedores.</p>
@@ -144,7 +144,7 @@ export async function mountProductosView(container, options = {}) {
       const prov = providersData.find(pr => pr.id === p.provider_id)
 
       return `
-        <article class="product-card ${p.active ? '' : 'inactive'}" data-id="${p.id}">
+        <article class="card product-card ${p.active ? '' : 'inactive'}" data-id="${p.id}">
           <div class="product-card-top">
             ${logoEl}
             <div class="product-card-header-info">
@@ -178,18 +178,18 @@ export async function mountProductosView(container, options = {}) {
 
           <div class="product-card-actions">
             <button type="button"
-              class="product-status-btn ${p.active ? 'active' : 'inactive'} btn-toggle-status"
+              class="btn btn-secondary product-status-btn ${p.active ? 'active' : 'inactive'} btn-toggle-status"
               data-id="${p.id}"
               title="Cambiar estado activo/inactivo"
             >
-              ${p.active ? 'Activo' : 'Inactivo'}
+              ${p.active ? ICONS.success : ICONS.info} ${p.active ? 'Activo' : 'Inactivo'}
             </button>
 
             <div class="product-action-btns">
-              <button type="button" class="btn btn-small btn-ghost btn-edit-product" data-id="${p.id}" title="Editar producto" aria-label="Editar producto">
+              <button type="button" class="btn btn-ghost btn-edit-product" data-id="${p.id}" title="Editar producto" aria-label="Editar producto">
                 ${ICONS.edit} Editar
               </button>
-              <button type="button" class="btn btn-small btn-ghost btn-delete-product" data-id="${p.id}" title="Eliminar producto" aria-label="Eliminar producto">
+              <button type="button" class="btn btn-ghost btn-delete-product" data-id="${p.id}" title="Eliminar producto" aria-label="Eliminar producto">
                 ${ICONS.trash}
               </button>
             </div>
@@ -208,12 +208,12 @@ export async function mountProductosView(container, options = {}) {
     bodyEl.className = 'form-stack'
     bodyEl.id = 'productForm'
     bodyEl.innerHTML = `
-      <label>
+      <label class="field">
         Nombre del producto *
         <input type="text" id="prodNameInput" required class="form-control" value="${escapeHtml(product?.name || '')}" placeholder="Ej. NETFLIX PREMIUM" />
       </label>
 
-      <label>
+      <label class="field">
         Proveedor predeterminado
         <select id="prodProviderSelect" class="form-control">
           <option value="" ${!product?.provider_id ? 'selected' : ''}>(Sin proveedor)</option>
@@ -226,17 +226,17 @@ export async function mountProductosView(container, options = {}) {
       </label>
 
       <div class="product-modal-grid-3">
-        <label>
+        <label class="field">
           Venta sugerida *
           <input type="number" step="0.01" min="0" id="prodPriceInput" required class="form-control" value="${product?.sale_price !== null && product?.sale_price !== undefined ? product.sale_price : ''}" placeholder="0.00" />
         </label>
 
-        <label>
+        <label class="field">
           Costo sugerido
           <input type="number" step="0.01" min="0" id="prodCostInput" class="form-control" value="${product?.default_cost !== null && product?.default_cost !== undefined ? product.default_cost : ''}" placeholder="0.00" />
         </label>
 
-        <label>
+        <label class="field">
           Moneda
           <select id="prodCurrencySelect" class="form-control">
             <option value="PEN" ${(product?.currency || 'PEN') === 'PEN' ? 'selected' : ''}>S/ (PEN)</option>
@@ -246,12 +246,12 @@ export async function mountProductosView(container, options = {}) {
       </div>
 
       <div class="product-modal-grid-2">
-        <label>
+        <label class="field">
           Período sugerido (valor)
           <input type="number" min="1" id="prodPeriodValInput" class="form-control" value="${product?.default_period_value || ''}" placeholder="Ej. 30" />
         </label>
 
-        <label>
+        <label class="field">
           Unidad de período
           <select id="prodPeriodUnitSelect" class="form-control">
             <option value="days" ${(product?.default_period_unit || 'days') === 'days' ? 'selected' : ''}>Días</option>
@@ -261,7 +261,7 @@ export async function mountProductosView(container, options = {}) {
         </label>
       </div>
 
-      <label>
+      <label class="field">
         URL del Logo (Opcional)
         <div class="product-logo-input-wrap">
           <input type="url" id="prodLogoInput" class="form-control" value="${escapeHtml(product?.logo_url || '')}" placeholder="https://ejemplo.com/logo.png" />
@@ -271,7 +271,7 @@ export async function mountProductosView(container, options = {}) {
         </div>
       </label>
 
-      <label>
+      <label class="field">
         Descripción / Notas del servicio (Opcional)
         <textarea id="prodDescInput" class="form-control" rows="2" placeholder="Características de la cuenta, reglas o información de soporte...">${escapeHtml(product?.description || '')}</textarea>
       </label>
