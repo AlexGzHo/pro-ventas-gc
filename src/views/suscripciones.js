@@ -1,6 +1,5 @@
 import {
   amountInPEN,
-  copyText,
   daysUntil,
   escapeHtml,
   formatDate,
@@ -11,12 +10,10 @@ import {
   statusFor
 } from '../utils.js'
 import {
-  credentialsPlain,
   credentialsText,
   reminderText,
   updateText
 } from '../whatsapp.js'
-import { toast } from '../ui/toast.js'
 import { ICONS } from '../ui/icons.js'
 import {
   state,
@@ -35,12 +32,24 @@ import {
   copyCredentialsAction
 } from '../features/subscriptionActions.js'
 
+// The desktop choice is persistent. Mobile only changes the rendered view.
+const mobileViewport = window.matchMedia('(max-width: 640px)')
+let sectionEvents = null
+let activeActionMenu = null
+mobileViewport.addEventListener('change', () => {
+  if (state.currentSection === 'subscriptions' && document.querySelector('#cards')) renderData()
+})
+
+function effectiveView() {
+  return mobileViewport.matches ? 'cards' : state.currentView
+}
+
 export function renderSubscriptionsSection(container) {
   const activeCount = getActiveFiltersCount()
   const hasAnyFilter = checkHasAnyActiveFilter()
 
   container.innerHTML = `
-    <header class="subs-header">
+    <header class="page-header subs-header">
       <div class="subs-title-group">
         <h2>Suscripciones</h2>
       </div>
@@ -49,11 +58,11 @@ export function renderSubscriptionsSection(container) {
       </button>
     </header>
 
-    <div class="subs-toolbar-row">
+    <div class="toolbar subs-toolbar-row">
       <div class="search-box">
         <span class="search-icon" aria-hidden="true">${ICONS.search}</span>
         <input id="searchInput" type="search" placeholder="Buscar cliente, celular, servicio, correo..." value="${escapeHtml(state.filters.search)}">
-        <button id="searchClearBtn" class="search-clear ${state.filters.search ? '' : 'hidden'}" type="button" title="Limpiar búsqueda" aria-label="Limpiar búsqueda">
+        <button id="searchClearBtn" class="btn btn-ghost search-clear ${state.filters.search ? '' : 'hidden'}" type="button" title="Limpiar búsqueda" aria-label="Limpiar búsqueda">
           ${ICONS.close}
         </button>
       </div>
@@ -67,15 +76,15 @@ export function renderSubscriptionsSection(container) {
         <div id="subsFilterPopover" class="subs-filter-popover hidden" role="region" aria-label="Filtros adicionales">
           <div class="subs-popover-header">
             <strong>Filtros</strong>
-            <button id="closeFiltersBtn" type="button" class="subs-popover-close" aria-label="Cerrar filtros">
+            <button id="closeFiltersBtn" type="button" class="btn btn-ghost subs-popover-close" aria-label="Cerrar filtros">
               ${ICONS.close}
             </button>
           </div>
-          <div class="subs-popover-field">
+          <div class="field subs-popover-field">
             <label for="serviceFilter" class="subs-field-label">Servicio</label>
             <select id="serviceFilter" class="filter-select"></select>
           </div>
-          <div class="subs-popover-field">
+          <div class="field subs-popover-field">
             <label for="ownerFilter" class="subs-field-label">Propietario</label>
             <select id="ownerFilter" class="filter-select">
               <option value="TODOS" ${state.filters.owner === 'TODOS' ? 'selected' : ''}>Todos</option>
@@ -84,7 +93,7 @@ export function renderSubscriptionsSection(container) {
             </select>
           </div>
           <div class="subs-popover-footer">
-            <button id="popoverResetBtn" type="button" class="btn btn-ghost btn-small">Restablecer filtros</button>
+            <button id="popoverResetBtn" type="button" class="btn btn-ghost">Restablecer filtros</button>
           </div>
         </div>
       </div>
@@ -98,17 +107,17 @@ export function renderSubscriptionsSection(container) {
 
     <div class="results-bar">
       <div id="resultsLine" class="results-line"></div>
-      <div class="view-toggle" role="group" aria-label="Cambiar vista">
-        <button id="viewCardsBtn" type="button" class="view-btn ${state.currentView === 'cards' ? 'active' : ''}" aria-pressed="${state.currentView === 'cards'}" title="Vista de tarjetas">
+      <div class="view-toggle ${mobileViewport.matches ? 'hidden' : ''}" role="group" aria-label="Cambiar vista">
+        <button id="viewCardsBtn" type="button" class="btn btn-secondary view-btn ${state.currentView === 'cards' ? 'active' : ''}" aria-pressed="${state.currentView === 'cards'}" title="Vista de tarjetas">
           ${ICONS.cards} <span>Tarjetas</span>
         </button>
-        <button id="viewSummaryBtn" type="button" class="view-btn ${state.currentView === 'summary' ? 'active' : ''}" aria-pressed="${state.currentView === 'summary'}" title="Vista resumen">
+        <button id="viewSummaryBtn" type="button" class="btn btn-secondary view-btn ${state.currentView === 'summary' ? 'active' : ''}" aria-pressed="${state.currentView === 'summary'}" title="Vista resumen">
           ${ICONS.summary} <span>Resumen</span>
         </button>
       </div>
     </div>
 
-    <section id="cards" class="${state.currentView === 'cards' ? 'grid' : 'summary-view-wrapper'}"></section>
+    <section id="cards" class="${effectiveView() === 'cards' ? 'grid' : 'summary-view-wrapper'}"></section>
   `
 
   bindSubscriptionsSectionEvents()
@@ -153,6 +162,10 @@ export function resetAllFilters() {
 }
 
 export function bindSubscriptionsSectionEvents() {
+  sectionEvents?.abort()
+  sectionEvents = new AbortController()
+  const { signal } = sectionEvents
+
   document.querySelector('#newBtn')?.addEventListener('click', () => openSubscriptionForm())
 
   document.querySelector('#viewCardsBtn')?.addEventListener('click', () => {
@@ -174,7 +187,26 @@ export function bindSubscriptionsSectionEvents() {
   window.addEventListener('pv-test-set-rows', (e) => {
     state.rows = e.detail || []
     renderData()
-  })
+  }, { signal })
+
+  document.addEventListener('click', (e) => {
+    if (activeActionMenu && !activeActionMenu.menu.contains(e.target) && !activeActionMenu.button.contains(e.target)) {
+      activeActionMenu.close()
+    }
+  }, { signal, capture: true })
+  window.addEventListener('scroll', (event) => {
+    if (activeActionMenu && !activeActionMenu.menu.contains(event.target)) activeActionMenu.position()
+  }, { signal, capture: true })
+  window.addEventListener('resize', () => activeActionMenu?.close(), { signal })
+  window.addEventListener('hashchange', () => activeActionMenu?.close(), { signal })
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape' || !activeActionMenu) return
+    const trigger = activeActionMenu.button
+    activeActionMenu.close()
+    trigger.focus()
+    event.preventDefault()
+    event.stopPropagation()
+  }, { signal, capture: true })
 
   const searchInput = document.querySelector('#searchInput')
   const searchClearBtn = document.querySelector('#searchClearBtn')
@@ -227,14 +259,14 @@ export function bindSubscriptionsSectionEvents() {
         filterPopover.classList.add('hidden')
         filtersToggleBtn.setAttribute('aria-expanded', 'false')
       }
-    })
+    }, { signal })
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && !filterPopover.classList.contains('hidden')) {
         filterPopover.classList.add('hidden')
         filtersToggleBtn.setAttribute('aria-expanded', 'false')
       }
-    })
+    }, { signal })
   }
 
   document.querySelector('#popoverResetBtn')?.addEventListener('click', () => {
@@ -259,10 +291,11 @@ export function bindSubscriptionsSectionEvents() {
 }
 
 export function updateViewButtons() {
+  document.querySelector('.view-toggle')?.classList.toggle('hidden', mobileViewport.matches)
   const cardsBtn = document.querySelector('#viewCardsBtn')
   const summaryBtn = document.querySelector('#viewSummaryBtn')
   if (cardsBtn && summaryBtn) {
-    const isCards = state.currentView === 'cards'
+    const isCards = effectiveView() === 'cards'
     cardsBtn.classList.toggle('active', isCards)
     cardsBtn.setAttribute('aria-pressed', String(isCards))
     summaryBtn.classList.toggle('active', !isCards)
@@ -394,7 +427,7 @@ export function renderQuickViews() {
       (v) => `
       <button
         type="button"
-        class="quick-view-btn ${v.key === current ? 'active' : ''} ${v.tone ? `tone-${v.tone}` : ''}"
+        class="chip quick-view-btn ${v.key === current ? 'active' : ''} ${v.tone ? `tone-${v.tone}` : ''}"
         data-quick-view="${v.key}"
         aria-pressed="${v.key === current}"
       >
@@ -442,7 +475,7 @@ export function filteredRows() {
 
 export function formatExpiryBadge(status) {
   if (status.days === null) {
-    return { icon: '', text: status.label }
+    return { icon: status.key === 'archivado' ? ICONS.restore : ICONS.info, text: status.label }
   }
   if (status.days < 0) {
     const d = Math.abs(status.days)
@@ -455,6 +488,64 @@ export function formatExpiryBadge(status) {
     return { icon: ICONS.alertTriangle, text: 'Vence mañana' }
   }
   return { icon: ICONS.clock, text: `Vence en ${status.days} días` }
+}
+
+function subscriptionBadgeHtml(row) {
+  const status = statusFor(row.expiry_date, row.archived_at)
+  const badge = formatExpiryBadge(status)
+  return `<span class="badge badge-${status.tone}"><span class="badge-icon">${badge.icon}</span><span>${escapeHtml(badge.text)}</span></span>`
+}
+
+function subscriptionMenuHtml(row, table) {
+  return `
+    <div class="card-menu-wrap">
+      <button type="button" class="btn ${table ? 'btn-small' : ''} btn-ghost card-menu-btn" aria-label="Más opciones de ${escapeHtml(row.client_name || 'suscripción')}" aria-haspopup="menu" aria-expanded="false">
+        ${ICONS.moreHorizontal}
+      </button>
+      <div class="card-dropdown hidden" role="menu" aria-label="Acciones de suscripción">
+        <button type="button" class="btn btn-ghost card-dropdown-item view-credentials" role="menuitem">
+          <span class="dropdown-item-icon">${ICONS.key}</span> Ver accesos
+        </button>
+        <button type="button" class="btn btn-ghost card-dropdown-item whatsapp-data" role="menuitem">
+          <span class="dropdown-item-icon">${ICONS.messageSquare}</span> Enviar datos
+        </button>
+        <button type="button" class="btn btn-ghost card-dropdown-item whatsapp-update" role="menuitem">
+          <span class="dropdown-item-icon">${ICONS.refresh}</span> Actualización
+        </button>
+        <div class="card-dropdown-divider" role="separator"></div>
+        <button type="button" class="btn btn-ghost card-dropdown-item edit" role="menuitem">
+          <span class="dropdown-item-icon">${ICONS.edit}</span> Editar suscripción
+        </button>
+        <button type="button" class="btn btn-ghost card-dropdown-item ${row.archived_at ? 'unarchive' : 'archive'}" role="menuitem">
+          <span class="dropdown-item-icon">${row.archived_at ? ICONS.restore : ICONS.trash}</span> ${row.archived_at ? 'Recuperar' : 'Dar de baja'}
+        </button>
+        <div class="card-dropdown-divider" role="separator"></div>
+        <button type="button" class="btn btn-danger card-dropdown-item delete-hard card-dropdown-danger" role="menuitem">
+          <span class="dropdown-item-icon">${ICONS.trash}</span> Eliminar definitivo
+        </button>
+      </div>
+    </div>`
+}
+
+function subscriptionActionsHtml(row, table = false) {
+  const size = table ? 'btn-small' : ''
+  return `
+    <div class="${table ? 'summary-actions-cell' : 'card-actions'}">
+      <div class="card-actions-row card-actions-row-1">
+        <button type="button" class="btn btn-secondary ${size} renew btn-action-renovar" title="Extender período">
+          ${ICONS.calendar}<span>Renovar</span>
+        </button>
+        <button type="button" class="btn btn-secondary ${size} whatsapp-reminder btn-action-cobrar" title="Cobrar por WhatsApp">
+          <span class="cobrar-icon">${ICONS.whatsapp}</span><span>Cobrar</span>
+        </button>
+      </div>
+      <div class="card-actions-row card-actions-row-2">
+        <button type="button" class="btn btn-secondary ${size} copy-all btn-action-copy" title="Copiar accesos completos">
+          ${ICONS.copy}<span class="copy-btn-text">Copiar todo</span>
+        </button>
+        ${subscriptionMenuHtml(row, table)}
+      </div>
+    </div>`
 }
 
 export function cardHtml(row) {
@@ -470,7 +561,6 @@ export function cardHtml(row) {
   const initials = serviceName.trim().substring(0, 2).toUpperCase()
   const logoUrl = row.product?.logo_url
   const categoryTag = row.product?.category || null
-  const badge = formatExpiryBadge(status)
 
   const saleDisplay = formatAmount(row.sale_price, row.sale_price_currency)
   const costDisplay = formatAmount(row.cost, row.cost_currency)
@@ -499,9 +589,7 @@ export function cardHtml(row) {
           </div>
         </div>
         <div class="card-badge-wrap">
-          <span class="badge badge-${status.tone}">
-            ${badge.icon ? `<span class="badge-icon">${badge.icon}</span> ` : ''}${escapeHtml(badge.text)}
-          </span>
+          ${subscriptionBadgeHtml(row)}
         </div>
       </div>
 
@@ -527,7 +615,7 @@ export function cardHtml(row) {
         </div>
         <div class="card-price-wrap">
           <strong class="card-price-val">${saleDisplay}</strong>
-          <button type="button" class="btn btn-ghost btn-small btn-card-details-toggle" aria-expanded="false" aria-controls="card-details-${row.id}" title="Mostrar u ocultar detalles adicionales">
+          <button type="button" class="btn btn-ghost btn-card-details-toggle" aria-expanded="false" aria-controls="card-details-${row.id}" title="Mostrar u ocultar detalles adicionales">
             <span class="toggle-chevron">${ICONS.chevronDown}</span>
           </button>
         </div>
@@ -566,58 +654,16 @@ export function cardHtml(row) {
         ` : ''}
       </div>
 
-      <div class="card-actions">
-        <div class="card-actions-row card-actions-row-1">
-          <button type="button" class="btn btn-small renew btn-action-renovar" title="Extender período">
-            ${ICONS.calendar}
-            <span>Renovar</span>
-          </button>
-          <button type="button" class="btn btn-small whatsapp-reminder btn-action-cobrar" title="Enviar recordatorio / cobro por WhatsApp">
-            <span class="cobrar-icon">${ICONS.whatsapp}</span>
-            <span>Cobrar</span>
-          </button>
-        </div>
-
-        <div class="card-actions-row card-actions-row-2">
-          <button type="button" class="btn btn-small copy-all btn-action-copy" title="Copiar todo (accesos y credenciales)" aria-label="Copiar todo">
-            ${ICONS.copy}
-            <span class="copy-btn-text">Copiar todo</span>
-          </button>
-
-          <div class="card-menu-wrap">
-            <button type="button" class="btn btn-small btn-ghost card-menu-btn" title="Más opciones" aria-label="Más opciones" aria-haspopup="true" aria-expanded="false">
-              ${ICONS.moreHorizontal}
-            </button>
-            <div class="card-dropdown hidden" role="menu">
-              <button type="button" class="card-dropdown-item view-credentials" role="menuitem">
-                <span class="dropdown-item-icon">${ICONS.key}</span> Ver accesos
-              </button>
-              <button type="button" class="card-dropdown-item whatsapp-data" role="menuitem">
-                <span class="dropdown-item-icon">${ICONS.messageSquare}</span> Enviar datos
-              </button>
-              <button type="button" class="card-dropdown-item whatsapp-update" role="menuitem">
-                <span class="dropdown-item-icon">${ICONS.refresh}</span> Actualización
-              </button>
-              <div class="card-dropdown-divider"></div>
-              <button type="button" class="card-dropdown-item edit" role="menuitem">
-                <span class="dropdown-item-icon">${ICONS.edit}</span> Editar suscripción
-              </button>
-              <button type="button" class="card-dropdown-item ${row.archived_at ? 'unarchive' : 'archive'}" role="menuitem">
-                <span class="dropdown-item-icon">${row.archived_at ? ICONS.restore : ICONS.trash}</span> ${row.archived_at ? 'Recuperar' : 'Dar de baja'}
-              </button>
-              <div class="card-dropdown-divider"></div>
-              <button type="button" class="card-dropdown-item delete-hard card-dropdown-danger" role="menuitem">
-                <span class="dropdown-item-icon">${ICONS.trash}</span> Eliminar definitivo
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      ${subscriptionActionsHtml(row)}
     </article>`
 }
 
 export function bindCardEvents() {
-  document.querySelectorAll('.card').forEach((card) => {
+  bindSubscriptionEvents()
+}
+
+function bindSubscriptionEvents() {
+  document.querySelectorAll('#cards article[data-id], #cards tr[data-id]').forEach((card) => {
     const row = rowById(card.dataset.id)
     if (!row) return
 
@@ -649,6 +695,47 @@ export function bindCardEvents() {
     const menuBtn = card.querySelector('.card-menu-btn')
     const dropdown = card.querySelector('.card-dropdown')
     if (menuBtn && dropdown) {
+      const menuWrap = menuBtn.closest('.card-menu-wrap')
+      let updatingMenu = false
+      const positionMenu = () => {
+        const buttonRect = menuBtn.getBoundingClientRect()
+        const menuRect = dropdown.getBoundingClientRect()
+        const gutter = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--space-2'))
+        const left = Math.max(gutter, Math.min(buttonRect.right - menuRect.width, window.innerWidth - menuRect.width - gutter))
+        const below = buttonRect.bottom + gutter
+        const top = below + menuRect.height <= window.innerHeight - gutter
+          ? below : Math.max(gutter, buttonRect.top - menuRect.height - gutter)
+        // Posición dinámica del disparador; tamaños y espacios vienen de CSS.
+        dropdown.style.left = `${left}px`
+        dropdown.style.top = `${top}px`
+      }
+      const setMenuOpen = (open, focusFirst = false) => {
+        if (updatingMenu) return
+        updatingMenu = true
+        try {
+          if (open) {
+            if (activeActionMenu?.menu !== dropdown) activeActionMenu?.close()
+            if (dropdown.parentElement !== document.body) document.body.appendChild(dropdown)
+            dropdown.classList.add('dropdown-portaled')
+            dropdown.classList.remove('hidden')
+            positionMenu()
+            activeActionMenu = { menu: dropdown, button: menuBtn, position: positionMenu, close: () => setMenuOpen(false) }
+          } else {
+            if (activeActionMenu?.menu === dropdown) activeActionMenu = null
+            dropdown.classList.remove('dropdown-portaled')
+            dropdown.style.removeProperty('left')
+            dropdown.style.removeProperty('top')
+            if (menuWrap.isConnected) menuWrap.appendChild(dropdown)
+            else dropdown.remove()
+          }
+          dropdown.classList.toggle('hidden', !open)
+          menuBtn.setAttribute('aria-expanded', String(open))
+          if (focusFirst && open) dropdown.querySelector('[role="menuitem"]')?.focus({ preventScroll: true })
+        } finally {
+          updatingMenu = false
+        }
+      }
+
       menuBtn.addEventListener('click', (e) => {
         e.stopPropagation()
         const isHidden = dropdown.classList.contains('hidden')
@@ -659,15 +746,42 @@ export function bindCardEvents() {
             if (b) b.setAttribute('aria-expanded', 'false')
           }
         })
-        dropdown.classList.toggle('hidden', !isHidden)
-        menuBtn.setAttribute('aria-expanded', String(isHidden))
+        setMenuOpen(isHidden, true)
+      })
+
+      menuBtn.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault()
+          setMenuOpen(true, true)
+        }
+      })
+
+      dropdown.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          e.preventDefault()
+          e.stopPropagation()
+          setMenuOpen(false)
+          menuBtn.focus()
+          return
+        }
+        if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return
+        e.preventDefault()
+        const items = [...dropdown.querySelectorAll('[role="menuitem"]')]
+        const index = items.indexOf(document.activeElement)
+        const next = e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1
+          : (index + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length
+        items[next]?.focus()
       })
 
       dropdown.querySelectorAll('.card-dropdown-item').forEach((item) => {
         item.addEventListener('click', () => {
-          dropdown.classList.add('hidden')
-          menuBtn.setAttribute('aria-expanded', 'false')
-        })
+          setMenuOpen(false)
+          menuBtn.focus()
+        }, { capture: true })
+      })
+
+      dropdown.addEventListener('focusout', (e) => {
+        if (!updatingMenu && !dropdown.contains(e.relatedTarget) && e.relatedTarget !== menuBtn) setMenuOpen(false)
       })
     }
   })
@@ -676,7 +790,7 @@ export function bindCardEvents() {
 export function summaryTableHtml(data) {
   return `
     <div class="summary-table-container">
-      <table class="summary-table">
+      <table class="data-table summary-table">
         <thead>
           <tr>
             <th>Cliente</th>
@@ -695,8 +809,6 @@ export function summaryTableHtml(data) {
 }
 
 export function summaryRowHtml(row) {
-  const status = statusFor(row.expiry_date, row.archived_at)
-  const badge = formatExpiryBadge(status)
   const serviceName = row.service || row.product?.name || 'SIN SERVICIO'
   const initials = serviceName.trim().substring(0, 2).toUpperCase()
   const logoUrl = row.product?.logo_url
@@ -731,73 +843,23 @@ export function summaryRowHtml(row) {
         </div>
       </td>
       <td data-label="Estado">
-        <span class="badge badge-${status.tone}">
-          ${badge.icon ? `<span class="badge-icon">${badge.icon}</span> ` : ''}${escapeHtml(badge.text)}
-        </span>
+        ${subscriptionBadgeHtml(row)}
       </td>
       <td data-label="Venta">
         <strong class="summary-price-val">${saleDisplay}</strong>
       </td>
       <td data-label="Acciones">
-        <div class="summary-actions-cell">
-          <button type="button" class="btn btn-small btn-action-renovar renew-modal-btn" data-id="${row.id}" title="Extender período" aria-label="Extender período">
-            ${ICONS.calendar}
-            <span>Renovar</span>
-          </button>
-          <button type="button" class="btn btn-small btn-action-cobrar btn-whatsapp-renew" data-id="${row.id}" title="Cobrar por WhatsApp" aria-label="Cobrar por WhatsApp">
-            <span class="cobrar-icon">${ICONS.whatsapp}</span>
-            <span>Cobrar</span>
-          </button>
-          <button type="button" class="btn btn-small btn-action-copy creds-modal-btn" data-id="${row.id}" title="Ver accesos y credenciales" aria-label="Ver accesos">
-            ${ICONS.key}
-            <span>Accesos</span>
-          </button>
-          <button type="button" class="btn btn-small btn-ghost edit-modal-btn" data-id="${row.id}" title="Editar suscripción" aria-label="Editar suscripción">
-            ${ICONS.edit}
-          </button>
-        </div>
+        ${subscriptionActionsHtml(row, true)}
       </td>
     </tr>`
 }
 
 export function bindSummaryEvents() {
-  const container = document.querySelector('#cards')
-  if (!container) return
-
-  container.querySelectorAll('.btn-whatsapp-renew').forEach((btn) => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation()
-      const row = rowById(btn.dataset.id)
-      if (row) safeWhatsapp(row, reminderText(row))
-    })
-  })
-
-  container.querySelectorAll('.renew-modal-btn').forEach((btn) => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation()
-      const row = rowById(btn.dataset.id)
-      if (row) openRenewModal(row)
-    })
-  })
-
-  container.querySelectorAll('.creds-modal-btn').forEach((btn) => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation()
-      const row = rowById(btn.dataset.id)
-      if (row) openCredentialsModal(row)
-    })
-  })
-
-  container.querySelectorAll('.edit-modal-btn').forEach((btn) => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation()
-      const row = rowById(btn.dataset.id)
-      if (row) openSubscriptionForm(row)
-    })
-  })
+  bindSubscriptionEvents()
 }
 
 export function renderData() {
+  activeActionMenu?.close()
   renderFilters()
   renderQuickViews()
   updateViewButtons()
@@ -852,7 +914,7 @@ export function renderData() {
     return
   }
 
-  if (state.currentView === 'summary') {
+  if (effectiveView() === 'summary') {
     cards.className = 'summary-view-wrapper'
     cards.innerHTML = summaryTableHtml(data)
     bindSummaryEvents()

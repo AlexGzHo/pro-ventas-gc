@@ -164,11 +164,11 @@ export function openCredentialsModal(row) {
         </div>
         <div class="cred-actions">
           ${isPassword ? `
-            <button type="button" class="btn btn-icon toggle-password-visibility" aria-label="Mostrar contraseña" title="Mostrar contraseña">
+            <button type="button" class="btn btn-ghost btn-icon toggle-password-visibility" aria-label="Mostrar contraseña" title="Mostrar contraseña">
               ${ICONS.eye}
             </button>
           ` : ''}
-          <button type="button" class="btn btn-icon copy-modal-field" data-value="${escapeHtml(String(value))}" data-label="${escapeHtml(label)}" aria-label="Copiar ${escapeHtml(label)}" title="Copiar ${escapeHtml(label)}">
+          <button type="button" class="btn btn-secondary btn-icon copy-modal-field" data-value="${escapeHtml(String(value))}" data-label="${escapeHtml(label)}" aria-label="Copiar ${escapeHtml(label)}" title="Copiar ${escapeHtml(label)}">
             ${ICONS.copy}
           </button>
         </div>
@@ -192,7 +192,7 @@ export function openCredentialsModal(row) {
       <button type="button" id="copyAllCredsBtn" class="btn btn-primary creds-footer-btn">
         ${ICONS.copy} <span>Copiar todo</span>
       </button>
-      <button type="button" id="sendWhatsappCredsBtn" class="btn creds-footer-btn">
+      <button type="button" id="sendWhatsappCredsBtn" class="btn btn-secondary creds-footer-btn">
         ${ICONS.whatsapp} <span>Enviar por WhatsApp</span>
       </button>
     </div>
