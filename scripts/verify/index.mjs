@@ -4,8 +4,9 @@ import { run as css } from './css.mjs'
 import { run as tokens } from './tokens.mjs'
 import { run as icons } from './icons.mjs'
 import { run as classes } from './classes.mjs'
+import { run as uniformity } from './uniformity.mjs'
 
-const results = [css(), tokens(), await icons(), classes()]
+const results = [css(), tokens(), await icons(), classes(), uniformity()]
 const ok = results.every(Boolean)
 console.log(ok ? '\nVerificación completa: OK' : '\nVerificación completa: HAY ERRORES. No hagas commit hasta corregirlos.')
 process.exit(ok ? 0 : 1)

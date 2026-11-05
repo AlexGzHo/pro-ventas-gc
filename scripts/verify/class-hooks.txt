@@ -16,7 +16,6 @@ whatsapp-reminder        # src/views/suscripciones.js: opción recordatorio What
 whatsapp-update          # src/views/suscripciones.js: opción actualización WhatsApp en menú ⋯
 edit                     # src/views/suscripciones.js: opción editar en menú ⋯
 delete-hard              # src/views/suscripciones.js: opción eliminar permanente en menú ⋯
-current                  # src/views/suscripciones.js: indicador de filtro activo en vista rápida
 quick-view-label         # src/views/suscripciones.js: etiqueta de conteo en vista rápida
 subs-filters-icon        # src/views/suscripciones.js: icono del botón de filtros
 summary-date-val         # src/views/suscripciones.js: nodo de fecha en fila resumen
@@ -40,7 +39,6 @@ client-subs-section      # src/views/clientes.js: contenedor de suscripciones de
 # Productos / Catálogo - Event delegation y filtros
 btn-edit-product         # src/views/productos.js: botón editar producto
 btn-delete-product       # src/views/productos.js: botón eliminar producto
-filter-active            # src/views/productos.js: indicador de chip de filtro activo
 
 # Proveedores - Event delegation
 btn-edit-prov            # src/views/proveedores.js: botón editar proveedor
@@ -54,10 +52,8 @@ btn-restore-single       # src/views/whatsappTemplates.js: botón restaurar plan
 confirm-cancel-btn       # src/ui/confirm.js: botón cancelar en confirmDialog
 copy-modal-field         # src/features/subscriptionActions.js: botón copiar campo específico
 toggle-password-visibility # src/features/subscriptionActions.js: botón mostrar/ocultar contraseña
-cred-masked              # src/features/subscriptionActions.js: estado enmascarado de contraseña
 credentials              # src/features/subscriptionActions.js: contenedor de bloque de credenciales
 
 # Formulario de suscripción
-is-invalid               # src/features/subscriptionForm.js: clase de validación en inputs
 state-pen                # src/features/subscriptionForm/financialBlock.js: indicador de estado PEN
 state-usdt               # src/features/subscriptionForm/financialBlock.js: indicador de estado USDT

@@ -1,25 +1,8 @@
-/* ==========================================================================
-PRO VENTAS GC — Vista Proveedores
-========================================================================== */
-.providers-view { display: flex; flex-direction: column; gap: var(--space-4, 16px); width: 100%; }
-.provider-name-cell { display: flex; flex-direction: column; gap: 3px; }
-.provider-name-title { font-weight: 650; font-size: 14.5px; color: var(--text-primary); }
-.provider-notes-sub { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
-.provider-link-badge {
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  transition: opacity 0.15s ease;
-}
-.provider-link-badge:hover { opacity: 0.85; }
-.provider-badge-telegram { background: #0088cc; color: #ffffff; border: none; }
-.provider-deps-badge { font-size: 11.5px; color: var(--text-secondary); }
-.provider-actions-cell { display: flex; align-items: center; gap: 4px; }
-/* Modal Formulario Proveedor */
-.provider-form-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-
-@media (max-width: 768px) {
-.provider-form-row { grid-template-columns: 1fr; }
+/* Proveedores: distribución de columnas y acciones. */
+.providers-view { display: flex; flex-direction: column; gap: var(--space-4); width: 100%; }
+.provider-name-cell { display: flex; flex-direction: column; gap: var(--space-1); }
+.provider-actions-cell { display: flex; align-items: center; gap: var(--space-1); }
+.provider-form-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); }
+@media (max-width: 640px) {
+  .provider-form-row { grid-template-columns: 1fr; }
 }
